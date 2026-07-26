@@ -45,13 +45,13 @@ actor AgentOrchestrator {
     private func researchPrompt(profile: StudentProfile, context: String) -> String {
         """
         You are the Program Researcher agent. Current date: \(Date.now.formatted(date: .abbreviated, time: .omitted)).
-        Research 10–15 internships, early-talent programs, fellowships, exploration programs, and pre-internships.
+        Research 6–8 internships, early-talent programs, fellowships, exploration programs, and pre-internships.
         Prioritize first- and second-year student eligibility. Targets: \(profile.targetCompanies). Locations: \(profile.locations).
         Work authorization constraints: \(profile.workAuthorization). Student context: \(context).
         Search official employer career and program sites first. LinkedIn may be a supporting source only; never the only source.
         Return JSON only, using snake_case keys for candidate program objects with company, program, career_area,
         fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes.
-        Do not make up URLs, eligibility, deadlines, or open status.
+        Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return no more than eight candidates.
         """
     }
 

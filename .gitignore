@@ -1,0 +1,10 @@
+.env
+.streamlit/
+__pycache__/
+*.pyc
+.build/
+dist/
+.venv/
+.DS_Store
+sources/
+AppSource/**/.DS_Store

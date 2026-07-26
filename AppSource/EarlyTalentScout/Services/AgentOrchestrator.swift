@@ -74,7 +74,69 @@ actor AgentOrchestrator {
     }
 
     private func decodeReport(_ text: String) throws -> ResearchReport {
-        try decode(text, as: ResearchReport.self)
+        let loose = try decode(text, as: LooseResearchReport.self)
+        let directions = (loose.careerSuggestions ?? []).compactMap { direction -> CareerDirection? in
+            guard let title = direction.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else { return nil }
+            return CareerDirection(
+                title: title,
+                why: direction.why ?? "A possible direction based on your profile.",
+                nextStep: direction.nextStep ?? "Explore relevant early-talent programs."
+            )
+        }
+        let opportunities = (loose.opportunities ?? []).compactMap { item -> Opportunity? in
+            guard let officialText = item.officialProgramURL,
+                  let officialURL = URL(string: officialText),
+                  !officialText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let status = ["open", "recurring_watch", "unknown"].contains(item.status ?? "") ? item.status! : "unknown"
+            return Opportunity(
+                company: item.company ?? "Unknown company",
+                program: item.program ?? "Early-talent program",
+                careerArea: item.careerArea ?? "General",
+                fitReason: item.fitReason ?? "Review the official program page to assess fit.",
+                eligibility: item.eligibility ?? "Verify eligibility on the official page.",
+                location: item.location ?? "Verify location",
+                status: status,
+                postingDate: item.postingDate,
+                deadline: item.deadline,
+                applicationURL: item.applicationURL.flatMap(URL.init(string:)),
+                officialProgramURL: officialURL,
+                linkedInURL: item.linkedInURL.flatMap(URL.init(string:)),
+                sourceNotes: item.sourceNotes ?? "Official program page supplied by the research agent."
+            )
+        }
+        return ResearchReport(
+            careerSuggestions: directions,
+            opportunities: opportunities,
+            researchNotes: loose.researchNotes ?? []
+        )
+    }
+
+    private struct LooseResearchReport: Decodable {
+        var careerSuggestions: [LooseCareerDirection]?
+        var opportunities: [LooseOpportunity]?
+        var researchNotes: [String]?
+    }
+
+    private struct LooseCareerDirection: Decodable {
+        var title: String?
+        var why: String?
+        var nextStep: String?
+    }
+
+    private struct LooseOpportunity: Decodable {
+        var company: String?
+        var program: String?
+        var careerArea: String?
+        var fitReason: String?
+        var eligibility: String?
+        var location: String?
+        var status: String?
+        var postingDate: String?
+        var deadline: String?
+        var applicationURL: String?
+        var officialProgramURL: String?
+        var linkedInURL: String?
+        var sourceNotes: String?
     }
 
     func findConnections(profile: StudentProfile, connectionRows: [[String: String]]) async throws -> [NetworkContact] {

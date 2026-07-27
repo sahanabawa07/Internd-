@@ -45,8 +45,8 @@ struct ResearchView: View {
 
                 if !store.report.suggestedCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("More companies worth exploring").font(.title3.weight(.semibold))
-                        Text("These are strong companies outside your target list that the research team thinks fit your interests. Add any of them to your Watch List for another check next time you open Internd.")
+                        Text("More organizations & programs worth exploring").font(.title3.weight(.semibold))
+                        Text("These go beyond your target list and are based first on your interests, experience, and preferred locations. They can include firms, fellowships, public-interest organizations, and career-access programs.")
                             .foregroundStyle(.secondary)
                         ForEach(store.report.suggestedCompanies) { company in
                             CompanySuggestionCard(company: company, isWatched: store.watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(company.company) == .orderedSame }), addToWatch: { store.addToWatchList(company) })

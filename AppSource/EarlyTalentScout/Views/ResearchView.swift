@@ -106,36 +106,7 @@ struct ResearchView: View {
             Text("Watch companies are monitored when Internd refreshes. Open a company to see every named program lead it found.")
                 .font(.system(size: 17)).foregroundStyle(.secondary)
             ForEach(store.watchCompanies) { watch in
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack {
-                        Text(watch.company).font(.system(size: 20, weight: .semibold))
-                        Spacer()
-                        Button("Remove", role: .destructive) { store.removeFromWatchList(watch) }
-                            .buttonStyle(.bordered)
-                    }
-                    Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
-                    if let leads = watch.programLeads, !leads.isEmpty {
-                        DisclosureGroup("View \(leads.count) program lead\(leads.count == 1 ? "" : "s")") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(leads) { lead in
-                                    HStack(alignment: .top) {
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(lead.program).font(.system(size: 18, weight: .semibold))
-                                            Text(lead.statusLabel).font(.system(size: 15)).foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        Button(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }) ? "Added" : "Add to tracker") { store.track(lead) }
-                                            .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
-                                            .disabled(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }))
-                                    }
-                                    Link("Official program page", destination: lead.officialProgramURL).font(.system(size: 16, weight: .medium))
-                                }
-                            }.padding(.top, 6)
-                        }.font(.system(size: 17, weight: .medium))
-                    }
-                    if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 16, weight: .medium)) }
-                }
-                .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
+                WatchCompanyCard(watch: watch, store: store)
             }
         }
     }
@@ -182,6 +153,64 @@ struct ResearchView: View {
         }
         .font(.system(size: 17, weight: .medium))
         .padding(13).background(.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 17))
+    }
+}
+
+private struct WatchCompanyCard: View {
+    let watch: WatchCompany
+    let store: AppStore
+    @State private var programName = ""
+    @State private var programURL = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(watch.company).font(.system(size: 20, weight: .semibold))
+                Spacer()
+                Button("Remove", role: .destructive) { store.removeFromWatchList(watch) }
+                    .buttonStyle(.bordered)
+            }
+            Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
+
+            if let leads = watch.programLeads, !leads.isEmpty {
+                DisclosureGroup("View \(leads.count) program lead\(leads.count == 1 ? "" : "s")") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(leads) { lead in
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(lead.program).font(.system(size: 18, weight: .semibold))
+                                    Text(lead.statusLabel).font(.system(size: 15)).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }) ? "Added" : "Add to tracker") { store.track(lead) }
+                                    .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                                    .disabled(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }))
+                            }
+                            Link("Official program page", destination: lead.officialProgramURL).font(.system(size: 16, weight: .medium))
+                        }
+                    }.padding(.top, 6)
+                }.font(.system(size: 17, weight: .medium))
+            }
+
+            DisclosureGroup("Add a program lead") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Add a program you found for \(watch.company). It will appear above with its own Add to tracker button.")
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
+                    TextField("Program, internship, or fellowship name", text: $programName)
+                    TextField("Official program or application link", text: $programURL)
+                    Button("Save program lead") {
+                        store.addManualWatchCompany(company: watch.company, reason: "", program: programName, officialURLText: programURL)
+                        programName = ""; programURL = ""
+                    }
+                    .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                    .disabled(programName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || programURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }.padding(.top, 6)
+            }
+            .font(.system(size: 17, weight: .medium))
+
+            if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 16, weight: .medium)) }
+        }
+        .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
     }
 }
 

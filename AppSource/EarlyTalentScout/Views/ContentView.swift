@@ -52,6 +52,7 @@ struct ContentView: View {
         case .today: DashboardView(store: store)
         case .profile: ProfileView(store: store, showingImporter: $showingImporter)
         case .research: ResearchView(store: store)
+        case .networkingLeads: NetworkingLeadsView(store: store)
         case .network: NetworkView(store: store)
         case .tracker: TrackerView(store: store)
         case .tailor: ResumeTailorView(store: store)

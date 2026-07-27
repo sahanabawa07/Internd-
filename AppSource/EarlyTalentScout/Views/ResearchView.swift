@@ -43,6 +43,17 @@ struct ResearchView: View {
                         .font(.caption)
                 }
 
+                if !store.report.suggestedCompanies.isEmpty {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("More companies worth exploring").font(.title3.weight(.semibold))
+                        Text("These are strong companies outside your target list that the research team thinks fit your interests. Add any of them to your Watch List for another check next time you open Internd.")
+                            .foregroundStyle(.secondary)
+                        ForEach(store.report.suggestedCompanies) { company in
+                            CompanySuggestionCard(company: company, isWatched: store.watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(company.company) == .orderedSame }), addToWatch: { store.addToWatchList(company) })
+                        }
+                    }
+                }
+
                 if !store.watchCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
                         Text("Watch list").font(.title3.weight(.semibold))
@@ -79,6 +90,30 @@ struct ResearchView: View {
             }
             .padding(22)
         }
+    }
+}
+
+private struct CompanySuggestionCard: View {
+    let company: CompanySuggestion
+    let isWatched: Bool
+    let addToWatch: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(company.company).font(.headline)
+                    Text(company.category).font(.caption.weight(.medium)).foregroundStyle(InterndPalette.ink)
+                }
+                Spacer()
+                Button(isWatched ? "Watching" : "Add to Watch List", systemImage: isWatched ? "eye.fill" : "eye", action: addToWatch)
+                    .buttonStyle(.bordered).disabled(isWatched)
+            }
+            Text(company.whyItFits).font(.subheadline)
+            Text("Early-talent path: \(company.earlyTalentPathway)").font(.caption).foregroundStyle(.secondary)
+            if let url = company.officialCareersURL { Link("Official careers page", destination: url).font(.caption.weight(.medium)) }
+        }
+        .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
     }
 }
 

@@ -49,12 +49,13 @@ actor AgentOrchestrator {
         This is a planning search, not only a "what is open today" search. Include target-company programs first. Keep credible recurring, recently closed, or expected-next-cycle programs in the opportunities list if they have an official employer program, university recruiting, or careers page. Mark those recurring_watch, state the known or expected application timing in source_notes, and preserve the official URL.
         Do not move a company to watch_companies merely because its program is not open today.
         Then add strong programs from other companies that match the student's stated career interests.
+        Independently identify 5–8 additional companies outside the student's target list that they should consider. Favor companies with sophomore-accessible programs, early-insight pathways, or standard internships that credibly accept sophomores. Include sectors that make sense for the student's interests and resume (for example banks, quant firms, tech, consulting, public interest, investing, or mission-driven organizations when relevant).
         Prioritize first- and second-year student eligibility. Targets: \(profile.targetCompanies). Locations: \(profile.locations).
         Work authorization constraints: \(profile.workAuthorization). Student context: \(context).
         Search official employer career and program sites first. LinkedIn may be a supporting source only; never the only source.
-        Return JSON only in this outer shape: {"opportunities":[...],"watch_companies":[...]}. Use snake_case keys for each candidate program object:
+        Return JSON only in this outer shape: {"opportunities":[...],"suggested_companies":[...],"watch_companies":[...]}. Use snake_case keys for each candidate program object:
         company, program, career_area, fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes.
-        Use watch_companies only for relevant companies where you could not identify any credible sophomore-accessible program or recurring early-talent pathway. Each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. In source_notes, say whether it is a target-company or interest match and whether it is open now, closed, or expected to return.
+        Each suggested_companies item needs company, category, why_it_fits, early_talent_pathway, official_careers_url. Do not repeat a target company. Use a real official careers/program URL when available; otherwise leave it null rather than inventing it. Use watch_companies only for relevant companies where you could not identify any credible sophomore-accessible program or recurring early-talent pathway. Each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. In source_notes, say whether it is a target-company or interest match and whether it is open now, closed, or expected to return.
         """
     }
 
@@ -65,7 +66,7 @@ actor AgentOrchestrator {
         keep credible recurring or recently closed official programs in the candidate list even when no role is open today. Mark them recurring_watch,
         retain the official program, university recruiting, or careers page, and describe the availability honestly in source_notes. Use status open only if the
         official source shows an active opening today; otherwise use recurring_watch or unknown. Only remove a candidate when the program claim or official URL cannot be supported.
-        Never substitute a job-board link. Return the corrected JSON in the same outer shape {"opportunities":[...],"watch_companies":[...]}; do not return prose.\n\nCandidates:\n\(candidateJSON)
+        For suggested_companies, keep only non-target companies with a credible reason to explore and an official URL when one was supplied. Never substitute a job-board link. Return the corrected JSON in the same outer shape {"opportunities":[...],"suggested_companies":[...],"watch_companies":[...]}; do not return prose.\n\nCandidates:\n\(candidateJSON)
         """
     }
 
@@ -74,7 +75,7 @@ actor AgentOrchestrator {
         You are the Opportunity Ranker agent. Rank the verified opportunities for this student, favoring first/second-year fit,
         stated interests, location constraints, and evidence from the resume. Preserve as many verified candidates as possible, including recurring next-cycle programs.
         Never move an opportunity into watch_companies merely because it is not currently open; watch_companies are only companies with no credible program pathway. Return JSON only in this exact shape:
-        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":""}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
+        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":""}],"suggested_companies":[{"company":"","category":"","why_it_fits":"","early_talent_pathway":"","official_careers_url":null}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
         Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified input:\n\(verifiedJSON)
         """
     }
@@ -115,6 +116,10 @@ actor AgentOrchestrator {
             guard let company = item.company?.trimmingCharacters(in: .whitespacesAndNewlines), !company.isEmpty else { return nil }
             return WatchCompany(company: company, reason: item.reason ?? "No suitable early-talent role was confirmed during the latest check.", officialCareersURL: item.officialCareersURL.flatMap(URL.init(string:)))
         }
+        let suggestedCompanies = (loose.suggestedCompanies ?? []).compactMap { item -> CompanySuggestion? in
+            guard let company = item.company?.trimmingCharacters(in: .whitespacesAndNewlines), !company.isEmpty else { return nil }
+            return CompanySuggestion(company: company, category: item.category ?? "Career match", whyItFits: item.whyItFits ?? "A strong company to explore based on your interests.", earlyTalentPathway: item.earlyTalentPathway ?? "Check the official careers page for early-talent opportunities.", officialCareersURL: item.officialCareersURL.flatMap(URL.init(string:)))
+        }
         let skills = (loose.skillSuggestions ?? []).compactMap { item -> SkillSuggestion? in
             guard let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else { return nil }
             return SkillSuggestion(title: title, why: item.why ?? "This skill appears often in your strongest matches.", nextStep: item.nextStep ?? "Choose one small practice step this week.")
@@ -122,6 +127,7 @@ actor AgentOrchestrator {
         return ResearchReport(
             careerSuggestions: directions,
             opportunities: opportunities,
+            suggestedCompanies: suggestedCompanies,
             watchCompanies: watched,
             skillSuggestions: skills,
             researchNotes: loose.researchNotes ?? []
@@ -131,6 +137,7 @@ actor AgentOrchestrator {
     private struct LooseResearchReport: Decodable {
         var careerSuggestions: [LooseCareerDirection]?
         var opportunities: [LooseOpportunity]?
+        var suggestedCompanies: [LooseCompanySuggestion]?
         var watchCompanies: [LooseWatchCompany]?
         var skillSuggestions: [LooseSkillSuggestion]?
         var researchNotes: [String]?
@@ -139,6 +146,14 @@ actor AgentOrchestrator {
     private struct LooseWatchCompany: Decodable {
         var company: String?
         var reason: String?
+        var officialCareersURL: String?
+    }
+
+    private struct LooseCompanySuggestion: Decodable {
+        var company: String?
+        var category: String?
+        var whyItFits: String?
+        var earlyTalentPathway: String?
         var officialCareersURL: String?
     }
 

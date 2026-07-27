@@ -177,6 +177,12 @@ final class AppStore {
         persistApplications()
     }
 
+    func addToWatchList(_ suggestion: CompanySuggestion) {
+        guard !watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(suggestion.company) == .orderedSame }) else { return }
+        watchCompanies.append(WatchCompany(company: suggestion.company, reason: "Added from More companies worth exploring. \(suggestion.earlyTalentPathway)", officialCareersURL: suggestion.officialCareersURL))
+        persistApplications()
+    }
+
     func suggestedContacts(for company: String) -> [NetworkContact] {
         let exact = networkContacts.filter { $0.company.localizedCaseInsensitiveCompare(company) == .orderedSame }
         let related = networkContacts.filter { contact in

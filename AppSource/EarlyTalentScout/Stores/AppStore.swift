@@ -27,7 +27,7 @@ final class AppStore {
     var errorMessage: String?
     var apiKey = APIKeyStore.read() ?? ""
     var hasRefreshedThisLaunch = false
-    var autoRefreshOnLaunch = UserDefaults.standard.object(forKey: "internd.autoRefreshOnLaunch") as? Bool ?? true
+    var autoRefreshOnLaunch = false
     var profileRefreshQueued = false
     private var profileRevision = 0
 
@@ -56,28 +56,17 @@ final class AppStore {
     func saveAPIKey() throws { try APIKeyStore.save(apiKey) }
 
     func setAutoRefreshOnLaunch(_ enabled: Bool) {
-        autoRefreshOnLaunch = enabled
-        UserDefaults.standard.set(enabled, forKey: "internd.autoRefreshOnLaunch")
+        autoRefreshOnLaunch = false
     }
 
     func refreshForNewLaunchIfPossible() async {
-        guard autoRefreshOnLaunch, !hasRefreshedThisLaunch, canResearch else { return }
-        hasRefreshedThisLaunch = true
-        await runResearch(openResearchWhenFinished: false)
+        // Research is intentionally manual so each API-backed run is a user choice.
     }
 
     func profileDidChange() {
         persistApplications()
         profileRevision += 1
-        let revisionToRefresh = profileRevision
-        guard profile.isReady, !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        profileRefreshQueued = true
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
-            guard let self, self.profileRevision == revisionToRefresh, self.run == nil else { return }
-            self.profileRefreshQueued = false
-            await self.runResearch(openResearchWhenFinished: false)
-        }
+        profileRefreshQueued = false
     }
 
     func runResearch(openResearchWhenFinished: Bool = true) async {
@@ -88,10 +77,7 @@ final class AppStore {
         errorMessage = nil
         defer {
             run = nil
-            if profileRevision != researchRevision {
-                profileRefreshQueued = false
-                Task { @MainActor [weak self] in await self?.runResearch(openResearchWhenFinished: false) }
-            }
+            if profileRevision != researchRevision { profileRefreshQueued = false }
         }
         let orchestrator = AgentOrchestrator(apiKey: apiKey)
         do {
@@ -250,6 +236,52 @@ final class AppStore {
     func addToWatchList(_ suggestion: CompanySuggestion) {
         guard !watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(suggestion.company) == .orderedSame }) else { return }
         watchCompanies.append(WatchCompany(company: suggestion.company, reason: "Added from More companies worth exploring. \(suggestion.earlyTalentPathway)", officialCareersURL: suggestion.officialCareersURL))
+        persistApplications()
+    }
+
+    func addManualOpportunity(company: String, program: String, description: String, officialURLText: String) {
+        let company = company.trimmingCharacters(in: .whitespacesAndNewlines)
+        let program = program.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !company.isEmpty, !program.isEmpty, let url = URL(string: officialURLText.trimmingCharacters(in: .whitespacesAndNewlines)), url.scheme != nil else { return }
+        let item = Opportunity(company: company, program: program, careerArea: "Manually added", fitReason: "Added by you.", eligibility: "Confirm eligibility on the official page.", location: "See official page", status: "unknown", postingDate: nil, deadline: nil, applicationURL: nil, officialProgramURL: url, linkedInURL: nil, sourceNotes: description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Manually added opportunity. Confirm details on the official page." : description, expectedApplicationTiming: "Check the official page for timing.", preparationChecklist: [], resumeFocus: [], skillFocus: [], officialSourceType: "Official link added by you", verifiedFacts: [])
+        guard !report.opportunities.contains(where: { $0.id == item.id }) else { return }
+        report.opportunities.insert(item, at: 0)
+        dismissedOpportunityIDs.remove(item.id)
+        persistApplications()
+    }
+
+    func addManualWatchCompany(company: String, reason: String, program: String, officialURLText: String) {
+        let company = company.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !company.isEmpty else { return }
+        let url = URL(string: officialURLText.trimmingCharacters(in: .whitespacesAndNewlines))
+        var leads: [Opportunity] = []
+        let program = program.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !program.isEmpty, let url, url.scheme != nil {
+            leads = [Opportunity(company: company, program: program, careerArea: "Manually added", fitReason: "Added by you.", eligibility: "Confirm on the official page.", location: "See official page", status: "unknown", postingDate: nil, deadline: nil, applicationURL: nil, officialProgramURL: url, linkedInURL: nil, sourceNotes: "Program lead added by you.", expectedApplicationTiming: "Check the official page.", preparationChecklist: [], resumeFocus: [], skillFocus: [], officialSourceType: "Official link added by you", verifiedFacts: [])]
+        }
+        if let index = watchCompanies.firstIndex(where: { $0.company.caseInsensitiveCompare(company) == .orderedSame }) {
+            let existing = watchCompanies[index].programLeads ?? []
+            watchCompanies[index].programLeads = existing + leads.filter { candidate in !existing.contains(where: { $0.id == candidate.id }) }
+            if !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { watchCompanies[index].reason = reason }
+            if watchCompanies[index].officialCareersURL == nil { watchCompanies[index].officialCareersURL = url }
+        } else {
+            watchCompanies.append(WatchCompany(company: company, reason: reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Manually added to Watch List." : reason, officialCareersURL: url, programLeads: leads))
+        }
+        persistApplications()
+    }
+
+    func removeFromWatchList(_ watch: WatchCompany) {
+        watchCompanies.removeAll { $0.id == watch.id }
+        persistApplications()
+    }
+
+    func addManualNetworkingLead(organization: String, category: String, reason: String, officialURLText: String) {
+        let organization = organization.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !organization.isEmpty else { return }
+        let url = URL(string: officialURLText.trimmingCharacters(in: .whitespacesAndNewlines))
+        let lead = NetworkingLead(organization: organization, category: category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Networking lead" : category, whyNetwork: reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Manually added networking lead." : reason, outreachAngle: "Ask for a short conversation about the organization and early-career paths.", officialURL: url)
+        guard !networkingLeads.contains(where: { $0.id == lead.id }) else { return }
+        networkingLeads.insert(lead, at: 0)
         persistApplications()
     }
 

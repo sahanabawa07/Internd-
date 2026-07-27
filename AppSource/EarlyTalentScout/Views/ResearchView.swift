@@ -3,6 +3,14 @@ import SwiftUI
 struct ResearchView: View {
     let store: AppStore
     @State private var section: ResearchSection = .opportunities
+    @State private var opportunityCompany = ""
+    @State private var opportunityProgram = ""
+    @State private var opportunityDescription = ""
+    @State private var opportunityURL = ""
+    @State private var watchCompany = ""
+    @State private var watchReason = ""
+    @State private var watchProgram = ""
+    @State private var watchURL = ""
 
     private enum ResearchSection: String, CaseIterable, Identifiable {
         case opportunities = "Opportunities"
@@ -65,6 +73,7 @@ struct ResearchView: View {
 
     @ViewBuilder
     private var opportunitiesSection: some View {
+        manualOpportunityForm
         if let run = store.run {
             ResearchProgressCard(run: run)
         } else if visibleOpportunities.isEmpty {
@@ -90,6 +99,7 @@ struct ResearchView: View {
 
     @ViewBuilder
     private var watchListSection: some View {
+        manualWatchForm
         if store.watchCompanies.isEmpty {
             ContentUnavailableView("No companies on your Watch List", systemImage: "eye", description: Text("Internd will place companies here when there is no confirmed live posting to apply to yet."))
         } else {
@@ -97,7 +107,12 @@ struct ResearchView: View {
                 .font(.system(size: 17)).foregroundStyle(.secondary)
             ForEach(store.watchCompanies) { watch in
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(watch.company).font(.system(size: 20, weight: .semibold))
+                    HStack {
+                        Text(watch.company).font(.system(size: 20, weight: .semibold))
+                        Spacer()
+                        Button("Remove", role: .destructive) { store.removeFromWatchList(watch) }
+                            .buttonStyle(.bordered)
+                    }
                     Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
                     if let leads = watch.programLeads, !leads.isEmpty {
                         DisclosureGroup("View \(leads.count) program lead\(leads.count == 1 ? "" : "s")") {
@@ -123,6 +138,50 @@ struct ResearchView: View {
                 .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
             }
         }
+    }
+
+    private var manualOpportunityForm: some View {
+        DisclosureGroup("Add an opportunity manually") {
+            VStack(alignment: .leading, spacing: 9) {
+                Text("Save a program you found yourself. Add an official program or application link so it is ready for your tracker.")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                TextField("Company or organization", text: $opportunityCompany)
+                TextField("Program, internship, or fellowship name", text: $opportunityProgram)
+                TextField("Short description (optional)", text: $opportunityDescription)
+                TextField("Official program or application link", text: $opportunityURL)
+                Button("Add to opportunities") {
+                    store.addManualOpportunity(company: opportunityCompany, program: opportunityProgram, description: opportunityDescription, officialURLText: opportunityURL)
+                    opportunityCompany = ""; opportunityProgram = ""; opportunityDescription = ""; opportunityURL = ""
+                }
+                .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                .disabled(opportunityCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || opportunityProgram.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || opportunityURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding(.top, 8)
+        }
+        .font(.system(size: 17, weight: .medium))
+        .padding(13).background(.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 17))
+    }
+
+    private var manualWatchForm: some View {
+        DisclosureGroup("Add a company or program lead manually") {
+            VStack(alignment: .leading, spacing: 9) {
+                Text("A program name and official link are optional. If you include them, the company card will show that program as a lead.")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                TextField("Company or organization", text: $watchCompany)
+                TextField("Why you want to watch it (optional)", text: $watchReason)
+                TextField("Program lead name (optional)", text: $watchProgram)
+                TextField("Official careers or program link (optional)", text: $watchURL)
+                Button("Add to Watch List") {
+                    store.addManualWatchCompany(company: watchCompany, reason: watchReason, program: watchProgram, officialURLText: watchURL)
+                    watchCompany = ""; watchReason = ""; watchProgram = ""; watchURL = ""
+                }
+                .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                .disabled(watchCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding(.top, 8)
+        }
+        .font(.system(size: 17, weight: .medium))
+        .padding(13).background(.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 17))
     }
 }
 

@@ -107,13 +107,13 @@ struct VerifiedFact: Codable, Identifiable, Hashable {
 }
 
 struct ResearchReport: Codable {
-    let careerSuggestions: [CareerDirection]
-    let opportunities: [Opportunity]
-    let suggestedCompanies: [CompanySuggestion]
-    let networkingLeads: [NetworkingLead]
-    let watchCompanies: [WatchCompany]
-    let skillSuggestions: [SkillSuggestion]
-    let researchNotes: [String]
+    var careerSuggestions: [CareerDirection]
+    var opportunities: [Opportunity]
+    var suggestedCompanies: [CompanySuggestion]
+    var networkingLeads: [NetworkingLead]
+    var watchCompanies: [WatchCompany]
+    var skillSuggestions: [SkillSuggestion]
+    var researchNotes: [String]
 
     static let empty = ResearchReport(careerSuggestions: [], opportunities: [], suggestedCompanies: [], networkingLeads: [], watchCompanies: [], skillSuggestions: [], researchNotes: [])
 }

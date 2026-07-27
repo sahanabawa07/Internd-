@@ -16,8 +16,7 @@ struct SettingsView: View {
                 if let saveMessage { Text(saveMessage).font(.system(size: 15)).foregroundStyle(.secondary) }
             }
             Section("Research policy") {
-                Toggle("Refresh research when Internd opens", isOn: Binding(get: { store.autoRefreshOnLaunch }, set: { store.setAutoRefreshOnLaunch($0) }))
-                Text("When this is on, Internd refreshes opportunities and the Watch List after you tap Begin. Each refresh uses your OpenAI API credit. You can still refresh manually from Research.")
+                Text("Research runs only when you press Refresh now in Research. Opening Internd or editing your profile will not use any API credit.")
                     .foregroundStyle(.secondary)
                 Text("The research and link-verification agents prefer employer-owned careers and program pages. LinkedIn is only a supporting source, never the sole application link.")
                     .foregroundStyle(.secondary)

@@ -2,6 +2,10 @@ import SwiftUI
 
 struct NetworkingLeadsView: View {
     let store: AppStore
+    @State private var organization = ""
+    @State private var category = ""
+    @State private var reason = ""
+    @State private var officialURL = ""
 
     var body: some View {
         ScrollView {
@@ -11,6 +15,8 @@ struct NetworkingLeadsView: View {
                     Text("Use this space for organizations without a confirmed opening, career-access programs, and thoughtful informational outreach. Apply-ready opportunities stay in Research.")
                         .foregroundStyle(.secondary)
                 }
+
+                manualLeadForm
 
                 if !store.networkingLeads.isEmpty {
                     leadSection
@@ -64,6 +70,27 @@ struct NetworkingLeadsView: View {
                 .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
             }
         }
+    }
+
+    private var manualLeadForm: some View {
+        DisclosureGroup("Add a networking lead manually") {
+            VStack(alignment: .leading, spacing: 9) {
+                Text("Use this for an organization you want to learn from before there is a confirmed opening.")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                TextField("Organization", text: $organization)
+                TextField("Field or category (optional)", text: $category)
+                TextField("Why it is relevant (optional)", text: $reason)
+                TextField("Official website (optional)", text: $officialURL)
+                Button("Add networking lead") {
+                    store.addManualNetworkingLead(organization: organization, category: category, reason: reason, officialURLText: officialURL)
+                    organization = ""; category = ""; reason = ""; officialURL = ""
+                }
+                .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                .disabled(organization.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }.padding(.top, 8)
+        }
+        .font(.system(size: 17, weight: .medium))
+        .padding(13).background(.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 17))
     }
 
 }

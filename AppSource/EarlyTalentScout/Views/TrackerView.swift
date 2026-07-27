@@ -59,6 +59,17 @@ private struct ApplicationCard: View {
             }
             TextField("Application requirements", text: $application.requirements, axis: .vertical).lineLimit(2...4)
             if let url = application.applicationURL { Link("Open official application page", destination: url) }
+            if !application.verifiedFacts.isEmpty {
+                DisclosureGroup("Research audit · \(application.officialSourceType)") {
+                    ForEach(application.verifiedFacts) { fact in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(fact.label): \(fact.value)").font(.caption)
+                            Text(fact.classificationLabel).font(.caption2).foregroundStyle(fact.classification == "confirmed" ? .green : fact.classification == "historical" ? .orange : .secondary)
+                            if let url = fact.sourceURL { Link("View source", destination: url).font(.caption2) }
+                        }.padding(.vertical, 2)
+                    }
+                }.font(.caption.weight(.medium)).tint(InterndPalette.ink)
+            }
 
             if !application.preparationChecklist.isEmpty || !application.resumeFocus.isEmpty || !application.skillFocus.isEmpty {
                 Divider()

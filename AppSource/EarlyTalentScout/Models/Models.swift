@@ -75,6 +75,8 @@ struct Opportunity: Codable, Identifiable, Hashable {
     let preparationChecklist: [String]
     let resumeFocus: [String]
     let skillFocus: [String]
+    let officialSourceType: String
+    let verifiedFacts: [VerifiedFact]
 
     var id: String { "\(company)-\(program)" }
     var statusLabel: String {
@@ -82,6 +84,22 @@ struct Opportunity: Codable, Identifiable, Hashable {
         case "open": "Open"
         case "recurring_watch": "Expected / recurring"
         default: "Verify"
+        }
+    }
+}
+
+struct VerifiedFact: Codable, Identifiable, Hashable {
+    var id: String { "\(label)-\(value)" }
+    var label: String
+    var value: String
+    var classification: String
+    var sourceURL: URL?
+
+    var classificationLabel: String {
+        switch classification {
+        case "confirmed": "Confirmed from official source"
+        case "historical": "Prior cycle / recurring information"
+        default: "Preparation guidance"
         }
     }
 }
@@ -166,14 +184,16 @@ struct ApplicationRecord: Codable, Identifiable, Hashable {
     var preparationChecklist: [String] = []
     var resumeFocus: [String] = []
     var skillFocus: [String] = []
+    var officialSourceType: String = "Official program or careers page"
+    var verifiedFacts: [VerifiedFact] = []
 
     enum CodingKeys: String, CodingKey {
         case id, company, program, status, postingDate, deadline, requirements, applicationURL, outreachStatus, notes
-        case description, whyThisMatches, lastChecked, suggestedContactIDs, companyResearchDone, resumeTailored, outreachPrepared, materialsChecked, interviewPrepDone, preparationChecklist, resumeFocus, skillFocus
+        case description, whyThisMatches, lastChecked, suggestedContactIDs, companyResearchDone, resumeTailored, outreachPrepared, materialsChecked, interviewPrepDone, preparationChecklist, resumeFocus, skillFocus, officialSourceType, verifiedFacts
     }
 
-    init(id: UUID = UUID(), company: String, program: String, status: String = "Saved", postingDate: String = "", deadline: String = "", requirements: String = "", applicationURL: URL? = nil, outreachStatus: String = "Not started", notes: String = "", description: String = "", whyThisMatches: String = "", lastChecked: Date = .now, suggestedContactIDs: [String] = [], companyResearchDone: Bool = false, resumeTailored: Bool = false, outreachPrepared: Bool = false, materialsChecked: Bool = false, interviewPrepDone: Bool = false, preparationChecklist: [String] = [], resumeFocus: [String] = [], skillFocus: [String] = []) {
-        self.id = id; self.company = company; self.program = program; self.status = status; self.postingDate = postingDate; self.deadline = deadline; self.requirements = requirements; self.applicationURL = applicationURL; self.outreachStatus = outreachStatus; self.notes = notes; self.description = description; self.whyThisMatches = whyThisMatches; self.lastChecked = lastChecked; self.suggestedContactIDs = suggestedContactIDs; self.companyResearchDone = companyResearchDone; self.resumeTailored = resumeTailored; self.outreachPrepared = outreachPrepared; self.materialsChecked = materialsChecked; self.interviewPrepDone = interviewPrepDone; self.preparationChecklist = preparationChecklist; self.resumeFocus = resumeFocus; self.skillFocus = skillFocus
+    init(id: UUID = UUID(), company: String, program: String, status: String = "Saved", postingDate: String = "", deadline: String = "", requirements: String = "", applicationURL: URL? = nil, outreachStatus: String = "Not started", notes: String = "", description: String = "", whyThisMatches: String = "", lastChecked: Date = .now, suggestedContactIDs: [String] = [], companyResearchDone: Bool = false, resumeTailored: Bool = false, outreachPrepared: Bool = false, materialsChecked: Bool = false, interviewPrepDone: Bool = false, preparationChecklist: [String] = [], resumeFocus: [String] = [], skillFocus: [String] = [], officialSourceType: String = "Official program or careers page", verifiedFacts: [VerifiedFact] = []) {
+        self.id = id; self.company = company; self.program = program; self.status = status; self.postingDate = postingDate; self.deadline = deadline; self.requirements = requirements; self.applicationURL = applicationURL; self.outreachStatus = outreachStatus; self.notes = notes; self.description = description; self.whyThisMatches = whyThisMatches; self.lastChecked = lastChecked; self.suggestedContactIDs = suggestedContactIDs; self.companyResearchDone = companyResearchDone; self.resumeTailored = resumeTailored; self.outreachPrepared = outreachPrepared; self.materialsChecked = materialsChecked; self.interviewPrepDone = interviewPrepDone; self.preparationChecklist = preparationChecklist; self.resumeFocus = resumeFocus; self.skillFocus = skillFocus; self.officialSourceType = officialSourceType; self.verifiedFacts = verifiedFacts
     }
 
     init(from decoder: Decoder) throws {
@@ -200,6 +220,8 @@ struct ApplicationRecord: Codable, Identifiable, Hashable {
         preparationChecklist = try c.decodeIfPresent([String].self, forKey: .preparationChecklist) ?? []
         resumeFocus = try c.decodeIfPresent([String].self, forKey: .resumeFocus) ?? []
         skillFocus = try c.decodeIfPresent([String].self, forKey: .skillFocus) ?? []
+        officialSourceType = try c.decodeIfPresent(String.self, forKey: .officialSourceType) ?? "Official program or careers page"
+        verifiedFacts = try c.decodeIfPresent([VerifiedFact].self, forKey: .verifiedFacts) ?? []
     }
 
     var preparationProgress: Int { [companyResearchDone, resumeTailored, outreachPrepared, materialsChecked].filter { $0 }.count }

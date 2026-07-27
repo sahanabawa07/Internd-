@@ -56,8 +56,8 @@ actor AgentOrchestrator {
         Search official employer career and program sites first. LinkedIn may be a supporting source only; never the only source.
         Also identify networking_leads: organizations that fit the student but do not normally offer a clear formal internship pathway, where informational outreach could uncover project work, a small team need, or a future connection. Do not claim that an unofficial internship exists. Use this only for credible networking-first leads, not for ordinary employers with formal internships.
         Return JSON only in this outer shape: {"opportunities":[...],"suggested_companies":[...],"networking_leads":[...],"watch_companies":[...]}. Use snake_case keys for each candidate program object:
-        company, program, career_area, fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes, expected_application_timing, preparation_checklist, resume_focus, skill_focus.
-        For every recurring or future program, provide an honest pre-application plan: expected_application_timing, preparation_checklist (2–4 actions), resume_focus (2–4 truthful themes/keywords), and skill_focus (1–3 skills to build). Clearly distinguish confirmed current requirements from historical, recurring, or inferred preparation guidance in source_notes. Each suggested_companies item may name a company, firm, nonprofit, government body, program provider, or accelerator; it needs company, category, why_it_fits, early_talent_pathway, official_careers_url. Each networking_leads item needs organization, category, why_network, outreach_angle, official_url. Do not repeat a target company. Use a real official careers/program URL when available; otherwise leave it null rather than inventing it. Use watch_companies only for relevant companies where you could not identify any credible sophomore-accessible program or recurring early-talent pathway. Each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. In source_notes, say whether it is a target-company or interest match and whether it is open now, closed, or expected to return.
+        company, program, career_area, fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes, expected_application_timing, preparation_checklist, resume_focus, skill_focus, official_source_type, verified_facts.
+        For every opportunity include official_source_type and verified_facts, where every item has label, value, classification (confirmed|historical|guidance), and source_url. Facts labeled confirmed must be stated on the linked official source. Historical facts must be from a prior/recurring official program page. Guidance must be clearly preparation advice, not a claim about the program. Never supply a deadline, eligibility, requirement, or opening status unless it appears as a matching verified_fact with an official source URL. For every recurring or future program, provide an honest pre-application plan: expected_application_timing, preparation_checklist (2–4 actions), resume_focus (2–4 truthful themes/keywords), and skill_focus (1–3 skills to build). Clearly distinguish confirmed current requirements from historical, recurring, or inferred preparation guidance in source_notes. Each suggested_companies item may name a company, firm, nonprofit, government body, program provider, or accelerator; it needs company, category, why_it_fits, early_talent_pathway, official_careers_url. Each networking_leads item needs organization, category, why_network, outreach_angle, official_url. Do not repeat a target company. Use a real official careers/program URL when available; otherwise leave it null rather than inventing it. Use watch_companies only for relevant companies where you could not identify any credible sophomore-accessible program or recurring early-talent pathway. Each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. In source_notes, say whether it is a target-company or interest match and whether it is open now, closed, or expected to return.
         """
     }
 
@@ -68,7 +68,7 @@ actor AgentOrchestrator {
         keep credible recurring or recently closed official programs in the candidate list even when no role is open today. Mark them recurring_watch,
         retain the official program, university recruiting, or careers page, and describe the availability honestly in source_notes. Use status open only if the
         official source shows an active opening today; otherwise use recurring_watch or unknown. Only remove a candidate when the program claim or official URL cannot be supported.
-        Preserve expected_application_timing, preparation_checklist, resume_focus, and skill_focus when they are reasonable; remove or soften any item not supported by the source and keep it clearly framed as preparation guidance rather than a confirmed requirement. For suggested_companies, keep only non-target employers, organizations, programs, or accelerators with a credible interest-based reason to explore and an official URL when one was supplied. For networking_leads, keep only credible organizations appropriate for informational outreach; never imply an unofficial internship exists. Never substitute a job-board link. Return the corrected JSON in the same outer shape {"opportunities":[...],"suggested_companies":[...],"networking_leads":[...],"watch_companies":[...]}; do not return prose.\n\nCandidates:\n\(candidateJSON)
+        Rebuild verified_facts after checking the cited official pages. Remove any fact not supported by an official URL. Mark current, page-supported claims confirmed; prior-cycle facts historical; and advice guidance. Do not leave an unverified deadline, eligibility, requirement, or availability claim elsewhere in a candidate. Preserve expected_application_timing, preparation_checklist, resume_focus, and skill_focus when they are reasonable; remove or soften any item not supported by the source and keep it clearly framed as preparation guidance rather than a confirmed requirement. For suggested_companies, keep only non-target employers, organizations, programs, or accelerators with a credible interest-based reason to explore and an official URL when one was supplied. For networking_leads, keep only credible organizations appropriate for informational outreach; never imply an unofficial internship exists. Never substitute a job-board link. Return the corrected JSON in the same outer shape {"opportunities":[...],"suggested_companies":[...],"networking_leads":[...],"watch_companies":[...]}; do not return prose.\n\nCandidates:\n\(candidateJSON)
         """
     }
 
@@ -77,8 +77,8 @@ actor AgentOrchestrator {
         You are the Opportunity Ranker agent. Rank the verified opportunities for this student, favoring first/second-year fit,
         stated interests, location constraints, and evidence from the resume. Rank suggested_companies by how much they expand the student's awareness beyond named targets while still fitting their interests; preserve a mix of direct employers and relevant programs/ecosystem pathways when justified. Preserve as many verified candidates as possible, including recurring next-cycle programs.
         Never move an opportunity into watch_companies merely because it is not currently open; watch_companies are only companies with no credible program pathway. Return JSON only in this exact shape:
-        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":"","expected_application_timing":"","preparation_checklist":[""],"resume_focus":[""],"skill_focus":[""]}],"suggested_companies":[{"company":"","category":"","why_it_fits":"","early_talent_pathway":"","official_careers_url":null}],"networking_leads":[{"organization":"","category":"","why_network":"","outreach_angle":"","official_url":null}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
-        Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified input:\n\(verifiedJSON)
+        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":"","expected_application_timing":"","preparation_checklist":[""],"resume_focus":[""],"skill_focus":[""],"official_source_type":"","verified_facts":[{"label":"","value":"","classification":"confirmed|historical|guidance","source_url":""}]}],"suggested_companies":[{"company":"","category":"","why_it_fits":"","early_talent_pathway":"","official_careers_url":null}],"networking_leads":[{"organization":"","category":"","why_network":"","outreach_angle":"","official_url":null}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
+        Preserve verified_facts, their classifications, and their source URLs exactly as supplied by the verifier; do not add facts. Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified input:\n\(verifiedJSON)
         """
     }
 
@@ -115,7 +115,12 @@ actor AgentOrchestrator {
                 expectedApplicationTiming: item.expectedApplicationTiming ?? "Check the official page for the next application window.",
                 preparationChecklist: item.preparationChecklist ?? [],
                 resumeFocus: item.resumeFocus ?? [],
-                skillFocus: item.skillFocus ?? []
+                skillFocus: item.skillFocus ?? [],
+                officialSourceType: item.officialSourceType ?? "Official program or careers page",
+                verifiedFacts: (item.verifiedFacts ?? []).compactMap { fact in
+                    guard let label = fact.label, let value = fact.value, ["confirmed", "historical", "guidance"].contains(fact.classification ?? "") else { return nil }
+                    return VerifiedFact(label: label, value: value, classification: fact.classification ?? "guidance", sourceURL: fact.sourceURL.flatMap(URL.init(string:)) ?? officialURL)
+                }
             )
         }
         let watched = (loose.watchCompanies ?? []).compactMap { item -> WatchCompany? in
@@ -207,6 +212,15 @@ actor AgentOrchestrator {
         var preparationChecklist: [String]?
         var resumeFocus: [String]?
         var skillFocus: [String]?
+        var officialSourceType: String?
+        var verifiedFacts: [LooseVerifiedFact]?
+    }
+
+    private struct LooseVerifiedFact: Decodable {
+        var label: String?
+        var value: String?
+        var classification: String?
+        var sourceURL: String?
     }
 
     func findConnections(profile: StudentProfile, connectionRows: [[String: String]]) async throws -> [NetworkContact] {

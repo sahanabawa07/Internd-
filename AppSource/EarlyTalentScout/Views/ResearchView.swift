@@ -185,6 +185,7 @@ private struct OpportunityCard: View {
                 Text(opportunity.statusLabel.uppercased()).font(.caption.weight(.bold)).foregroundStyle(statusColor).padding(.horizontal, 8).padding(.vertical, 5).background(statusColor.opacity(0.12), in: Capsule())
             }
             Text(opportunity.sourceNotes).font(.subheadline)
+            ResearchAudit(sourceType: opportunity.officialSourceType, facts: opportunity.verifiedFacts, fallbackURL: opportunity.officialProgramURL)
             Label("Why this matches you: \(opportunity.fitReason)", systemImage: "sparkles").font(.subheadline).foregroundStyle(.secondary)
             HStack(spacing: 14) {
                 Label(opportunity.careerArea, systemImage: "briefcase")
@@ -212,6 +213,38 @@ private struct OpportunityCard: View {
     }
 
     private var statusColor: Color { opportunity.status == "open" ? .green : opportunity.status == "recurring_watch" ? .orange : .secondary }
+}
+
+private struct ResearchAudit: View {
+    let sourceType: String
+    let facts: [VerifiedFact]
+    let fallbackURL: URL
+
+    var body: some View {
+        DisclosureGroup("Research audit · \(facts.count) sourced detail\(facts.count == 1 ? "" : "s")") {
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Source: \(sourceType)").font(.caption).foregroundStyle(.secondary)
+                if facts.isEmpty {
+                    Text("Review the official page before relying on any application detail.").font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(facts) { fact in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(fact.label): \(fact.value)").font(.caption)
+                        HStack {
+                            Text(fact.classificationLabel).font(.caption2).foregroundStyle(color(for: fact.classification))
+                            Link("View source", destination: fact.sourceURL ?? fallbackURL).font(.caption2)
+                        }
+                    }
+                }
+            }.padding(.top, 5)
+        }
+        .font(.caption.weight(.medium))
+        .tint(InterndPalette.ink)
+    }
+
+    private func color(for classification: String) -> Color {
+        classification == "confirmed" ? .green : classification == "historical" ? .orange : .secondary
+    }
 }
 
 private struct ResearchProgressCard: View {

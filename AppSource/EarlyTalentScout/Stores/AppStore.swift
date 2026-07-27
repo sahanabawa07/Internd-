@@ -199,7 +199,7 @@ final class AppStore {
     func track(_ opportunity: Opportunity) {
         guard !applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }) else { return }
         let contacts = suggestedContacts(for: opportunity.company).map(\.id)
-        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts, preparationChecklist: opportunity.preparationChecklist, resumeFocus: opportunity.resumeFocus, skillFocus: opportunity.skillFocus))
+        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts, preparationChecklist: opportunity.preparationChecklist, resumeFocus: opportunity.resumeFocus, skillFocus: opportunity.skillFocus, officialSourceType: opportunity.officialSourceType, verifiedFacts: opportunity.verifiedFacts))
         persistApplications()
     }
 

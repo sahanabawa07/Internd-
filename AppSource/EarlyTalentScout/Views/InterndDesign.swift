@@ -27,13 +27,13 @@ struct WelcomeView: View {
                         .frame(maxWidth: 430, alignment: .leading)
                         .padding(.top, 34)
                     Text("A calm place to plan applications, discover early-talent programs, and grow meaningful connections.")
-                        .font(.title3)
+                        .font(.system(size: 24))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: 430, alignment: .leading)
                         .padding(.top, 18)
                     Button(action: begin) {
                         Label("Begin", systemImage: "arrow.right")
-                            .font(.headline)
+                            .font(.system(size: 20, weight: .semibold))
                             .padding(.horizontal, 25)
                             .padding(.vertical, 13)
                     }
@@ -71,7 +71,7 @@ struct WorkspaceHomeView: View {
                             Text("Your career garden")
                                 .font(.system(size: 42, weight: .semibold, design: .serif))
                             Text("Choose a space to tend today.")
-                                .font(.title3)
+                                .font(.system(size: 24))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -81,7 +81,7 @@ struct WorkspaceHomeView: View {
                             Text("\(nextActions) next action\(nextActions == 1 ? "" : "s")")
                         }
                         .buttonStyle(.plain)
-                            .font(.subheadline.weight(.medium))
+                            .font(.system(size: 18, weight: .medium))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
                             .background(.white.opacity(0.58), in: Capsule())
@@ -125,7 +125,7 @@ struct DetailPageShell<Content: View>: View {
                         Text(section.rawValue)
                             .font(.system(size: 39, weight: .semibold, design: .serif))
                         Text(pageNote)
-                            .font(.title3)
+                            .font(.system(size: 24))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -201,10 +201,10 @@ private struct WorkspaceTile: View {
                     .shadow(color: InterndPalette.ink.opacity(0.08), radius: 6, y: 3)
                 Spacer(minLength: 2)
                 Text(section.rawValue)
-                    .font(.headline)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(InterndPalette.ink)
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(.system(size: 17))
                     .foregroundStyle(InterndPalette.ink.opacity(0.67))
                     .lineLimit(1)
             }

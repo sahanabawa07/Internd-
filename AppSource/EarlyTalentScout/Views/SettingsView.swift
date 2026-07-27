@@ -13,7 +13,7 @@ struct SettingsView: View {
                     do { try store.saveAPIKey(); saveMessage = "Saved securely in your macOS Keychain." }
                     catch { saveMessage = error.localizedDescription }
                 }
-                if let saveMessage { Text(saveMessage).font(.caption).foregroundStyle(.secondary) }
+                if let saveMessage { Text(saveMessage).font(.system(size: 15)).foregroundStyle(.secondary) }
             }
             Section("Research policy") {
                 Toggle("Refresh research when Internd opens", isOn: Binding(get: { store.autoRefreshOnLaunch }, set: { store.setAutoRefreshOnLaunch($0) }))

@@ -39,7 +39,7 @@ struct CompanyResearchView: View {
                 Section("Early talent") { ForEach(brief.earlyTalentNotes, id: \.self) { Text("• \($0)") } }
                 Section("Conversation starters") { ForEach(brief.conversationStarters, id: \.self) { Text("• \($0)") } }
                 Section("Interview themes") { ForEach(brief.interviewThemes, id: \.self) { Text("• \($0)") } }
-                Section { Text(brief.sourceCaveat).font(.caption).foregroundStyle(.secondary) }
+                Section { Text(brief.sourceCaveat).font(.system(size: 15)).foregroundStyle(.secondary) }
             }
         }
         .onAppear {

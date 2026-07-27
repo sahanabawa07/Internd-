@@ -10,7 +10,7 @@ struct TrackerView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Application tracker").font(.title2.weight(.semibold))
+                        Text("Application tracker").font(.system(size: 28, weight: .semibold))
                         Text("Each application carries its deadlines, requirements, outreach, and preparation stages with it.").foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -43,15 +43,15 @@ private struct ApplicationCard: View {
         VStack(alignment: .leading, spacing: 13) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
-                    TextField("Company", text: $application.company).font(.title3.weight(.semibold))
+                    TextField("Company", text: $application.company).font(.system(size: 25, weight: .semibold))
                     TextField("Internship or program", text: $application.program).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Picker("Stage", selection: $application.status) { ForEach(stages, id: \.self) { Text($0).tag($0) } }
                     .labelsHidden().frame(width: 155)
             }
-            if !application.description.isEmpty { Text(application.description).font(.subheadline) }
-            if !application.whyThisMatches.isEmpty { Label("Why this matches you: \(application.whyThisMatches)", systemImage: "sparkles").font(.subheadline).foregroundStyle(.secondary) }
+            if !application.description.isEmpty { Text(application.description).font(.system(size: 17)) }
+            if !application.whyThisMatches.isEmpty { Label("Why this matches you: \(application.whyThisMatches)", systemImage: "sparkles").font(.system(size: 17)).foregroundStyle(.secondary) }
 
             HStack {
                 TextField("Posting date", text: $application.postingDate)
@@ -63,17 +63,17 @@ private struct ApplicationCard: View {
                 DisclosureGroup("Research audit · \(application.officialSourceType)") {
                     ForEach(application.verifiedFacts) { fact in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(fact.label): \(fact.value)").font(.caption)
-                            Text(fact.classificationLabel).font(.caption2).foregroundStyle(fact.classification == "confirmed" ? .green : fact.classification == "historical" ? .orange : .secondary)
-                            if let url = fact.sourceURL { Link("View source", destination: url).font(.caption2) }
+                            Text("\(fact.label): \(fact.value)").font(.system(size: 15))
+                            Text(fact.classificationLabel).font(.system(size: 14)).foregroundStyle(fact.classification == "confirmed" ? .green : fact.classification == "historical" ? .orange : .secondary)
+                            if let url = fact.sourceURL { Link("View source", destination: url).font(.system(size: 14)) }
                         }.padding(.vertical, 2)
                     }
-                }.font(.caption.weight(.medium)).tint(InterndPalette.ink)
+                }.font(.system(size: 16, weight: .medium)).tint(InterndPalette.ink)
             }
 
             if !application.preparationChecklist.isEmpty || !application.resumeFocus.isEmpty || !application.skillFocus.isEmpty {
                 Divider()
-                Text("Prepare before applications open").font(.headline)
+                Text("Prepare before applications open").font(.system(size: 20, weight: .semibold))
                 if !application.preparationChecklist.isEmpty { LabeledContent("Preparation", value: application.preparationChecklist.joined(separator: " · ")) }
                 if !application.resumeFocus.isEmpty { LabeledContent("Resume focus", value: application.resumeFocus.joined(separator: " · ")) }
                 if !application.skillFocus.isEmpty { LabeledContent("Skills to build", value: application.skillFocus.joined(separator: " · ")) }
@@ -81,11 +81,11 @@ private struct ApplicationCard: View {
                     Button("Tailor resume") { store.startResumeTailor(for: application) }
                     Button("Build skills plan") { store.startSkillsPlan(for: application) }
                 }
-                Text("For recurring programs, this is preparation guidance from current or prior-cycle information—not a promise of next cycle's requirements.").font(.caption).foregroundStyle(.secondary)
+                Text("For recurring programs, this is preparation guidance from current or prior-cycle information—not a promise of next cycle's requirements.").font(.system(size: 15)).foregroundStyle(.secondary)
             }
 
             Divider()
-            Text("Preparation progress \(application.preparationProgress)/4").font(.headline)
+            Text("Preparation progress \(application.preparationProgress)/4").font(.system(size: 20, weight: .semibold))
             ProgressView(value: Double(application.preparationProgress), total: 4).tint(InterndPalette.ink)
             Toggle("Company research complete", isOn: progressBinding(\.companyResearchDone))
             Toggle("Resume tailored", isOn: progressBinding(\.resumeTailored))
@@ -94,16 +94,16 @@ private struct ApplicationCard: View {
             Toggle("Interview prep complete", isOn: progressBinding(\.interviewPrepDone))
 
             Divider()
-            Text("Suggested people to reach out to").font(.headline)
+            Text("Suggested people to reach out to").font(.system(size: 20, weight: .semibold))
             let contacts = store.suggestedContacts(for: application.company)
             if contacts.isEmpty {
                 Text("Import your LinkedIn Connections CSV or add people in Network to see up to three real contacts here. Internd will never invent connections.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button("Open Network") { store.selection = .network }.font(.caption)
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                Button("Open Network") { store.selection = .network }.font(.system(size: 15))
             } else {
                 ForEach(contacts) { contact in
                     HStack {
-                        VStack(alignment: .leading) { Text(contact.name); Text("\(contact.company) · \(contact.sharedContext)").font(.caption).foregroundStyle(.secondary) }
+                        VStack(alignment: .leading) { Text(contact.name); Text("\(contact.company) · \(contact.sharedContext)").font(.system(size: 15)).foregroundStyle(.secondary) }
                         Spacer()
                         Button("Draft outreach") { Task { await store.createOutreach(for: contact, opportunity: application) } }.buttonStyle(.borderless)
                     }
@@ -111,7 +111,7 @@ private struct ApplicationCard: View {
             }
             TextField("Outreach status", text: $application.outreachStatus)
             TextField("Personal notes", text: $application.notes, axis: .vertical).lineLimit(2...4)
-            Text("Last checked \(application.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.tertiary)
+            Text("Last checked \(application.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.system(size: 15)).foregroundStyle(.tertiary)
         }
         .padding(17).background(.white.opacity(0.66), in: RoundedRectangle(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.7)))

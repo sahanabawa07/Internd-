@@ -15,7 +15,7 @@ struct ProfileView: View {
                     Button("Import PDF or text") { showingImporter = true }
                 }
                 TextEditor(text: $store.profile.resumeText)
-                    .font(.body)
+                    .font(.system(size: 18))
                     .frame(minHeight: 140)
             }
             Section("Your search") {
@@ -35,12 +35,12 @@ struct ProfileView: View {
                     .disabled(!store.canResearch)
                 if let message = store.researchReadinessMessage {
                     Label(message, systemImage: "info.circle")
-                        .font(.caption)
+                        .font(.system(size: 15))
                         .foregroundStyle(.secondary)
                 }
                 if store.profileRefreshQueued {
                     Label("Profile updated — refreshing recommendations after you finish editing.", systemImage: "arrow.clockwise")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
                 }
             } footer: {
                 Text("Five focused agents analyze, research, verify, and rank results. Target companies, interests, or a resume are enough to begin. Your API key is stored in macOS Keychain.")

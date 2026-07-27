@@ -18,23 +18,23 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Today").font(.largeTitle.weight(.semibold))
+                        Text("Today").font(.system(size: 38, weight: .semibold))
                         Text("Your plan is ordered by deadlines, strongest matches, and applications with the most work remaining.")
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if store.autoRefreshOnLaunch { Label("Auto-refresh on", systemImage: "arrow.clockwise").font(.caption).foregroundStyle(.secondary) }
+                    if store.autoRefreshOnLaunch { Label("Auto-refresh on", systemImage: "arrow.clockwise").font(.system(size: 15)).foregroundStyle(.secondary) }
                 }
 
                 if store.run != nil {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Refreshing your opportunities and Watch List").font(.headline)
-                        Text("This launch refresh uses your OpenAI API credit. You can turn it off in Settings anytime.").font(.caption).foregroundStyle(.secondary)
+                        Text("Refreshing your opportunities and Watch List").font(.system(size: 20, weight: .semibold))
+                        Text("This launch refresh uses your OpenAI API credit. You can turn it off in Settings anytime.").font(.system(size: 15)).foregroundStyle(.secondary)
                     }.padding(15).background(.white.opacity(0.64), in: RoundedRectangle(cornerRadius: 18))
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Next actions").font(.title3.weight(.semibold))
+                    Text("Next actions").font(.system(size: 25, weight: .semibold))
                     ForEach(plannedFollowUps.prefix(2)) { relationship in
                         TodayAction(icon: "paperplane", title: "Follow up with \(relationship.name)", detail: "\(relationship.company) · scheduled \(relationship.followUpDate)", action: { store.selection = .network })
                     }
@@ -48,7 +48,7 @@ struct DashboardView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Skill building for this week").font(.title3.weight(.semibold))
+                    Text("Skill building for this week").font(.system(size: 25, weight: .semibold))
                     let skills = Array(store.report.skillSuggestions.prefix(2))
                     if skills.isEmpty {
                         TodayAction(icon: "target", title: fallbackSkillTitle, detail: "Create a plan in Skills Plan after your next research refresh.", action: { store.selection = .skills })
@@ -60,7 +60,7 @@ struct DashboardView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("At a glance").font(.title3.weight(.semibold))
+                    Text("At a glance").font(.system(size: 25, weight: .semibold))
                     HStack(spacing: 12) {
                         StatCard(value: "\(store.applications.count)", label: "Tracked")
                         StatCard(value: "\(store.watchCompanies.count)", label: "Watching")
@@ -115,8 +115,8 @@ private struct TodayAction: View {
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: icon).font(.title3).frame(width: 34, height: 34).background(InterndPalette.pink.opacity(0.45), in: Circle())
-                VStack(alignment: .leading, spacing: 3) { Text(title).foregroundStyle(.primary); Text(detail).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading) }
+                Image(systemName: icon).font(.system(size: 24)).frame(width: 34, height: 34).background(InterndPalette.pink.opacity(0.45), in: Circle())
+                VStack(alignment: .leading, spacing: 3) { Text(title).foregroundStyle(.primary); Text(detail).font(.system(size: 15)).foregroundStyle(.secondary).multilineTextAlignment(.leading) }
                 Spacer(); Image(systemName: "chevron.right").foregroundStyle(.tertiary)
             }.padding(13).background(.white.opacity(0.62), in: RoundedRectangle(cornerRadius: 17))
         }.buttonStyle(.plain)
@@ -125,5 +125,5 @@ private struct TodayAction: View {
 
 private struct StatCard: View {
     let value: String; let label: String
-    var body: some View { VStack(alignment: .leading, spacing: 2) { Text(value).font(.title2.weight(.semibold)); Text(label).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 15)) }
+    var body: some View { VStack(alignment: .leading, spacing: 2) { Text(value).font(.system(size: 28, weight: .semibold)); Text(label).font(.system(size: 15)).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 15)) }
 }

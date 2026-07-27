@@ -10,15 +10,15 @@ struct OutreachView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Outreach drafts").font(.title2.weight(.semibold))
+                    Text("Outreach drafts").font(.system(size: 28, weight: .semibold))
                     Text("Review the message, copy it into LinkedIn, and mark it sent. Internd then updates the tracker and creates a seven-day follow-up reminder automatically.")
                         .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Your message template").font(.headline)
+                    Text("Your message template").font(.system(size: 20, weight: .semibold))
                     TextEditor(text: $store.outreachTemplate).frame(minHeight: 75)
-                    Text("Optional placeholders: {first_name}, {shared_context}, {career_interest}, and {company}.").font(.caption).foregroundStyle(.secondary)
+                    Text("Optional placeholders: {first_name}, {shared_context}, {career_interest}, and {company}.").font(.system(size: 15)).foregroundStyle(.secondary)
                 }
                 .padding(15).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 18))
 
@@ -47,15 +47,15 @@ private struct OutreachDraftCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("To: \(draft.recipientName)").font(.headline)
+                    Text("To: \(draft.recipientName)").font(.system(size: 20, weight: .semibold))
                     if !draft.contactCompany.isEmpty { Text(draft.contactCompany).foregroundStyle(.secondary) }
-                    Text(draft.subject).font(.subheadline).foregroundStyle(.secondary)
+                    Text(draft.subject).font(.system(size: 17)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if draft.opportunityID != nil { Label("Tracker linked", systemImage: "link").font(.caption).foregroundStyle(.secondary) }
+                if draft.opportunityID != nil { Label("Tracker linked", systemImage: "link").font(.system(size: 15)).foregroundStyle(.secondary) }
             }
             Text(draft.message).textSelection(.enabled)
-            Text(draft.rationale).font(.caption).foregroundStyle(.secondary)
+            Text(draft.rationale).font(.system(size: 15)).foregroundStyle(.secondary)
             HStack {
                 Button(copied ? "Copied" : "Copy message", systemImage: copied ? "checkmark" : "doc.on.doc", action: copy)
                     .buttonStyle(.bordered)
@@ -69,7 +69,7 @@ private struct OutreachDraftCard: View {
                     .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
             }
             Text("Marking it sent adds a follow-up reminder for seven days from now. It never sends a message for you.")
-                .font(.caption).foregroundStyle(.tertiary)
+                .font(.system(size: 15)).foregroundStyle(.tertiary)
         }
         .padding(17).background(.white.opacity(0.66), in: RoundedRectangle(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.7)))

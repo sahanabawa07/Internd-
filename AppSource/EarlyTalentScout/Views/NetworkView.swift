@@ -38,14 +38,14 @@ struct NetworkView: View {
                 ForEach(store.networkContacts) { contact in
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
-                            Text(contact.name).font(.headline)
+                            Text(contact.name).font(.system(size: 20, weight: .semibold))
                             Text(contact.company).foregroundStyle(.secondary)
                             Spacer()
                             Button("Draft message") { Task { await store.createOutreach(for: contact, opportunity: nil) } }
                         }
                         Text(contact.headline).foregroundStyle(.secondary)
                         Text(contact.sharedContext)
-                        Text(contact.reachOutReason).font(.caption).foregroundStyle(.secondary)
+                        Text(contact.reachOutReason).font(.system(size: 15)).foregroundStyle(.secondary)
                         if let url = contact.profileURL { Link("Open public profile", destination: url) }
                     }
                     .padding(.vertical, 4)
@@ -54,7 +54,7 @@ struct NetworkView: View {
             Section("Relationship follow-ups") {
                 ForEach($store.relationships) { $relationship in
                     VStack(alignment: .leading) {
-                        Text("\(relationship.name) · \(relationship.company)").font(.headline)
+                        Text("\(relationship.name) · \(relationship.company)").font(.system(size: 20, weight: .semibold))
                         Text(relationship.sharedContext).foregroundStyle(.secondary)
                         HStack { TextField("Last contact", text: $relationship.lastContact); TextField("Follow up", text: $relationship.followUpDate) }
                         TextField("Relationship", text: $relationship.relationshipStrength)

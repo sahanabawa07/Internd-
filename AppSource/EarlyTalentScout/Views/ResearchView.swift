@@ -12,7 +12,7 @@ struct ResearchView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Your opportunity list").font(.title2.weight(.semibold))
+                        Text("Your opportunity list").font(.system(size: 28, weight: .semibold))
                         Text("Official program links for open roles and credible next-cycle programs. Nothing enters your tracker until you choose it.")
                             .foregroundStyle(.secondary)
                     }
@@ -23,7 +23,7 @@ struct ResearchView: View {
 
                 if store.profileRefreshQueued {
                     Label("Your profile changed. Internd is preparing a fresh recommendation set.", systemImage: "arrow.clockwise")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
                 }
 
                 if let run = store.run {
@@ -32,7 +32,7 @@ struct ResearchView: View {
                     ContentUnavailableView("No current results", systemImage: "sparkle.magnifyingglass", description: Text(store.researchReadinessMessage ?? "Internd will refresh this list whenever you open it."))
                 } else {
                     Text("Last checked \(Date.now.formatted(date: .abbreviated, time: .shortened)) · \(visibleOpportunities.count) programs shown")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
                     ForEach(visibleOpportunities) { opportunity in
                         OpportunityCard(
                             opportunity: opportunity,
@@ -45,12 +45,12 @@ struct ResearchView: View {
 
                 if !store.dismissedOpportunityIDs.isEmpty {
                     Button("Restore dismissed results") { store.restoreDismissedResearch() }
-                        .font(.caption)
+                        .font(.system(size: 15))
                 }
 
                 if !store.report.suggestedCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("More organizations & programs worth exploring").font(.title3.weight(.semibold))
+                        Text("More organizations & programs worth exploring").font(.system(size: 25, weight: .semibold))
                         Text("These go beyond your target list and are based first on your interests, experience, and preferred locations. They can include firms, fellowships, public-interest organizations, and career-access programs.")
                             .foregroundStyle(.secondary)
                         ForEach(store.report.suggestedCompanies) { company in
@@ -61,7 +61,7 @@ struct ResearchView: View {
 
                 if !store.networkingLeads.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("Networking-first leads").font(.title3.weight(.semibold))
+                        Text("Networking-first leads").font(.system(size: 25, weight: .semibold))
                         Text("These organizations may not have a clear formal internship. Use them for informed conversations and relationship building—never assume an unofficial role exists.")
                             .foregroundStyle(.secondary)
                         ForEach(store.networkingLeads) { lead in
@@ -72,17 +72,17 @@ struct ResearchView: View {
 
                 if !store.watchCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("Watch list").font(.title3.weight(.semibold))
+                        Text("Watch list").font(.system(size: 25, weight: .semibold))
                         Text("Internd could not identify a credible early-talent pathway for these companies in the latest check. It checks them again on your next app launch and moves a match into Research when one appears.")
                             .foregroundStyle(.secondary)
                         ForEach(store.watchCompanies) { watch in
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: "eye").foregroundStyle(InterndPalette.ink)
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(watch.company).font(.headline)
-                                    Text(watch.reason).font(.subheadline).foregroundStyle(.secondary)
-                                    Text("Last checked \(watch.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.tertiary)
-                                    if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.caption) }
+                                    Text(watch.company).font(.system(size: 20, weight: .semibold))
+                                    Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
+                                    Text("Last checked \(watch.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.system(size: 15)).foregroundStyle(.tertiary)
+                                    if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 15)) }
                                 }
                                 Spacer()
                             }
@@ -93,12 +93,12 @@ struct ResearchView: View {
 
                 if !store.report.skillSuggestions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Skills emerging from your research").font(.title3.weight(.semibold))
+                        Text("Skills emerging from your research").font(.system(size: 25, weight: .semibold))
                         ForEach(store.report.skillSuggestions) { skill in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(skill.title).font(.headline)
+                                Text(skill.title).font(.system(size: 20, weight: .semibold))
                                 Text(skill.why).foregroundStyle(.secondary)
-                                Text("Next step: \(skill.nextStep)").font(.subheadline)
+                                Text("Next step: \(skill.nextStep)").font(.system(size: 17))
                             }.padding(12).background(.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
                         }
                     }
@@ -118,20 +118,20 @@ private struct NetworkingLeadCard: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(lead.organization).font(.headline)
-                    Text(lead.category).font(.caption.weight(.medium)).foregroundStyle(InterndPalette.ink)
+                    Text(lead.organization).font(.system(size: 20, weight: .semibold))
+                    Text(lead.category).font(.system(size: 16, weight: .medium)).foregroundStyle(InterndPalette.ink)
                 }
                 Spacer()
-                Text(lead.status).font(.caption).foregroundStyle(.secondary)
+                Text(lead.status).font(.system(size: 15)).foregroundStyle(.secondary)
             }
-            Text(lead.whyNetwork).font(.subheadline)
-            Text("Conversation angle: \(lead.outreachAngle)").font(.caption).foregroundStyle(.secondary)
+            Text(lead.whyNetwork).font(.system(size: 17))
+            Text("Conversation angle: \(lead.outreachAngle)").font(.system(size: 15)).foregroundStyle(.secondary)
             HStack {
                 Button("Research organization", action: research).buttonStyle(.bordered)
                 Link("Find people on LinkedIn", destination: linkedInSearchURL).buttonStyle(.bordered)
                 Button("Save a contact", action: network).buttonStyle(.borderedProminent).tint(InterndPalette.ink)
             }
-            if let url = lead.officialURL { Link("Official website", destination: url).font(.caption.weight(.medium)) }
+            if let url = lead.officialURL { Link("Official website", destination: url).font(.system(size: 16, weight: .medium)) }
         }
         .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
     }
@@ -151,16 +151,16 @@ private struct CompanySuggestionCard: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(company.company).font(.headline)
-                    Text(company.category).font(.caption.weight(.medium)).foregroundStyle(InterndPalette.ink)
+                    Text(company.company).font(.system(size: 20, weight: .semibold))
+                    Text(company.category).font(.system(size: 16, weight: .medium)).foregroundStyle(InterndPalette.ink)
                 }
                 Spacer()
                 Button(isWatched ? "Watching" : "Add to Watch List", systemImage: isWatched ? "eye.fill" : "eye", action: addToWatch)
                     .buttonStyle(.bordered).disabled(isWatched)
             }
-            Text(company.whyItFits).font(.subheadline)
-            Text("Early-talent path: \(company.earlyTalentPathway)").font(.caption).foregroundStyle(.secondary)
-            if let url = company.officialCareersURL { Link("Official careers page", destination: url).font(.caption.weight(.medium)) }
+            Text(company.whyItFits).font(.system(size: 17))
+            Text("Early-talent path: \(company.earlyTalentPathway)").font(.system(size: 15)).foregroundStyle(.secondary)
+            if let url = company.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 16, weight: .medium)) }
         }
         .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
     }
@@ -175,7 +175,7 @@ private struct OpportunityCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 11) {
             HStack(alignment: .top) {
-                Button(action: dismiss) { Image(systemName: "xmark").font(.caption.weight(.bold)).frame(width: 26, height: 26).background(.black.opacity(0.06), in: Circle()) }
+                Button(action: dismiss) { Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).frame(width: 26, height: 26).background(.black.opacity(0.06), in: Circle()) }
                     .buttonStyle(.plain).accessibilityLabel("Remove this result")
                 Spacer()
                 Button(isTracked ? "Added to tracker" : "Add to tracker", systemImage: isTracked ? "checkmark.circle.fill" : "plus.circle.fill", action: add)
@@ -183,34 +183,34 @@ private struct OpportunityCard: View {
             }
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(opportunity.program).font(.title3.weight(.semibold))
+                    Text(opportunity.program).font(.system(size: 25, weight: .semibold))
                     Text(opportunity.company).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(opportunity.statusLabel.uppercased()).font(.caption.weight(.bold)).foregroundStyle(statusColor).padding(.horizontal, 8).padding(.vertical, 5).background(statusColor.opacity(0.12), in: Capsule())
+                Text(opportunity.statusLabel.uppercased()).font(.system(size: 16, weight: .bold)).foregroundStyle(statusColor).padding(.horizontal, 8).padding(.vertical, 5).background(statusColor.opacity(0.12), in: Capsule())
             }
-            Text(opportunity.sourceNotes).font(.subheadline)
+            Text(opportunity.sourceNotes).font(.system(size: 17))
             ResearchAudit(sourceType: opportunity.officialSourceType, facts: opportunity.verifiedFacts, fallbackURL: opportunity.officialProgramURL)
-            Label("Why this matches you: \(opportunity.fitReason)", systemImage: "sparkles").font(.subheadline).foregroundStyle(.secondary)
+            Label("Why this matches you: \(opportunity.fitReason)", systemImage: "sparkles").font(.system(size: 17)).foregroundStyle(.secondary)
             HStack(spacing: 14) {
                 Label(opportunity.careerArea, systemImage: "briefcase")
                 Label(opportunity.location, systemImage: "mappin.and.ellipse")
-            }.font(.caption).foregroundStyle(.secondary)
-            Text("Eligibility & requirements: \(opportunity.eligibility)").font(.caption).foregroundStyle(.secondary)
+            }.font(.system(size: 15)).foregroundStyle(.secondary)
+            Text("Eligibility & requirements: \(opportunity.eligibility)").font(.system(size: 15)).foregroundStyle(.secondary)
             if opportunity.status == "recurring_watch" {
-                Label("Expected timing: \(opportunity.expectedApplicationTiming)", systemImage: "calendar.badge.clock").font(.caption).foregroundStyle(.secondary)
+                Label("Expected timing: \(opportunity.expectedApplicationTiming)", systemImage: "calendar.badge.clock").font(.system(size: 15)).foregroundStyle(.secondary)
                 if !opportunity.preparationChecklist.isEmpty {
-                    Text("Prepare now: \(opportunity.preparationChecklist.joined(separator: " · "))").font(.caption).foregroundStyle(.secondary)
+                    Text("Prepare now: \(opportunity.preparationChecklist.joined(separator: " · "))").font(.system(size: 15)).foregroundStyle(.secondary)
                 }
             }
             HStack {
                 if let date = opportunity.postingDate { Text("Posted: \(date)") }
                 if let deadline = opportunity.deadline { Text("Deadline: \(deadline)") }
-            }.font(.caption).foregroundStyle(.secondary)
+            }.font(.system(size: 15)).foregroundStyle(.secondary)
             HStack(spacing: 14) {
                 Link("Official program page", destination: opportunity.officialProgramURL)
                 if let url = opportunity.applicationURL { Link("Application link", destination: url) }
-            }.font(.subheadline.weight(.medium))
+            }.font(.system(size: 18, weight: .medium))
         }
         .padding(17)
         .background(.white.opacity(0.66), in: RoundedRectangle(cornerRadius: 20))
@@ -228,22 +228,22 @@ private struct ResearchAudit: View {
     var body: some View {
         DisclosureGroup("Research audit · \(facts.count) sourced detail\(facts.count == 1 ? "" : "s")") {
             VStack(alignment: .leading, spacing: 7) {
-                Text("Source: \(sourceType)").font(.caption).foregroundStyle(.secondary)
+                Text("Source: \(sourceType)").font(.system(size: 15)).foregroundStyle(.secondary)
                 if facts.isEmpty {
-                    Text("Review the official page before relying on any application detail.").font(.caption).foregroundStyle(.secondary)
+                    Text("Review the official page before relying on any application detail.").font(.system(size: 15)).foregroundStyle(.secondary)
                 }
                 ForEach(facts) { fact in
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(fact.label): \(fact.value)").font(.caption)
+                        Text("\(fact.label): \(fact.value)").font(.system(size: 15))
                         HStack {
-                            Text(fact.classificationLabel).font(.caption2).foregroundStyle(color(for: fact.classification))
-                            Link("View source", destination: fact.sourceURL ?? fallbackURL).font(.caption2)
+                            Text(fact.classificationLabel).font(.system(size: 14)).foregroundStyle(color(for: fact.classification))
+                            Link("View source", destination: fact.sourceURL ?? fallbackURL).font(.system(size: 14))
                         }
                     }
                 }
             }.padding(.top, 5)
         }
-        .font(.caption.weight(.medium))
+        .font(.system(size: 16, weight: .medium))
         .tint(InterndPalette.ink)
     }
 
@@ -256,10 +256,10 @@ private struct ResearchProgressCard: View {
     let run: ResearchRun
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Refreshing your research").font(.headline)
-            Text("This uses your OpenAI API credit and checks official program pages plus your Watch List.").font(.caption).foregroundStyle(.secondary)
+            Text("Refreshing your research").font(.system(size: 20, weight: .semibold))
+            Text("This uses your OpenAI API credit and checks official program pages plus your Watch List.").font(.system(size: 15)).foregroundStyle(.secondary)
             ForEach(run.agents) { agent in
-                HStack { Text(agent.name); Spacer(); Text(agent.status.rawValue).font(.caption).foregroundStyle(agent.status == .failed ? .red : .secondary) }
+                HStack { Text(agent.name); Spacer(); Text(agent.status.rawValue).font(.system(size: 15)).foregroundStyle(agent.status == .failed ? .red : .secondary) }
             }
         }.padding(16).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 18))
     }

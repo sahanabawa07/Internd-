@@ -209,7 +209,43 @@ final class AppStore {
     func track(_ opportunity: Opportunity) {
         guard !applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }) else { return }
         let contacts = suggestedContacts(for: opportunity.company).map(\.id)
-        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts, preparationChecklist: opportunity.preparationChecklist, resumeFocus: opportunity.resumeFocus, skillFocus: opportunity.skillFocus, officialSourceType: opportunity.officialSourceType, verifiedFacts: opportunity.verifiedFacts))
+        func factValue(matching terms: [String]) -> String? {
+            opportunity.verifiedFacts.first { fact in
+                let label = fact.label.lowercased()
+                return terms.contains { label.contains($0) }
+            }?.value
+        }
+        let posting = opportunity.postingDate ?? factValue(matching: ["posting", "posted", "opens", "opening"])
+        let deadline = opportunity.deadline ?? factValue(matching: ["deadline", "close", "due date"])
+        let requirementFacts = opportunity.verifiedFacts
+            .filter { fact in
+                let label = fact.label.lowercased()
+                return label.contains("require") || label.contains("eligib") || label.contains("qualification")
+            }
+            .map(\.value)
+        let requirements = Array(Set(([opportunity.eligibility] + requirementFacts).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })).joined(separator: " · ")
+        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: posting ?? "", deadline: deadline ?? "", requirements: requirements, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts, preparationChecklist: opportunity.preparationChecklist, resumeFocus: opportunity.resumeFocus, skillFocus: opportunity.skillFocus, officialSourceType: opportunity.officialSourceType, verifiedFacts: opportunity.verifiedFacts))
+        persistApplications()
+    }
+
+    func applySavedResearchDetails(to applicationID: UUID) {
+        guard let index = applications.firstIndex(where: { $0.id == applicationID }),
+              let opportunity = report.opportunities.first(where: { $0.company == applications[index].company && $0.program == applications[index].program }) else { return }
+        func factValue(matching terms: [String]) -> String? {
+            opportunity.verifiedFacts.first { fact in
+                let label = fact.label.lowercased()
+                return terms.contains { label.contains($0) }
+            }?.value
+        }
+        if applications[index].postingDate.isEmpty { applications[index].postingDate = opportunity.postingDate ?? factValue(matching: ["posting", "posted", "opens", "opening"]) ?? "" }
+        if applications[index].deadline.isEmpty { applications[index].deadline = opportunity.deadline ?? factValue(matching: ["deadline", "close", "due date"]) ?? "" }
+        if applications[index].requirements.isEmpty {
+            let details = Array(Set(([opportunity.eligibility] + opportunity.verifiedFacts.filter { $0.label.lowercased().contains("require") || $0.label.lowercased().contains("eligib") || $0.label.lowercased().contains("qualification") }.map(\.value)).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }))
+            applications[index].requirements = details.joined(separator: " · ")
+        }
+        applications[index].verifiedFacts = opportunity.verifiedFacts
+        applications[index].officialSourceType = opportunity.officialSourceType
+        applications[index].applicationURL = opportunity.applicationURL ?? opportunity.officialProgramURL
         persistApplications()
     }
 

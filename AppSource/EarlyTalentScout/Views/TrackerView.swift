@@ -21,7 +21,7 @@ struct TrackerView: View {
                 if store.applications.isEmpty {
                     ContentUnavailableView("Nothing is in your tracker yet", systemImage: "checklist", description: Text("Choose Add to tracker on a research result to keep its official link and details here."))
                 } else {
-                    Text("Use View details for any application to review the source, confirm its information, and manage outreach and preparation.")
+                    Text("Research-sourced fields appear automatically when available. Click directly into Posted, Deadline, or a detail field to edit; “Not found” means the source did not provide that information.")
                         .font(.system(size: 15)).foregroundStyle(.secondary)
                     applicationTable
                     if let selectedIndex = store.applications.firstIndex(where: { $0.id == selectedApplicationID }) {
@@ -92,8 +92,8 @@ private struct ApplicationTableRow: View {
             TextField("Program", text: $application.program).frame(width: 210, alignment: .leading)
             Picker("Stage", selection: $application.status) { ForEach(stages, id: \.self) { Text($0).tag($0) } }
                 .labelsHidden().frame(width: 160, alignment: .leading)
-            TextField("Posted", text: $application.postingDate).frame(width: 115, alignment: .leading)
-            TextField("Deadline", text: $application.deadline).frame(width: 125, alignment: .leading)
+            TextField("", text: $application.postingDate, prompt: Text("Not found")).frame(width: 115, alignment: .leading)
+            TextField("", text: $application.deadline, prompt: Text("Not found")).frame(width: 125, alignment: .leading)
             Text(application.requirements.isEmpty ? "—" : application.requirements)
                 .font(.system(size: 15)).lineLimit(2).frame(width: 230, alignment: .leading)
             Text("\(store.suggestedContacts(for: application.company).count) people")
@@ -150,6 +150,9 @@ private struct ApplicationCard: View {
                 if let date = application.applicationDetailsVerifiedAt {
                     Text("Verified by you on \(date.formatted(date: .abbreviated, time: .shortened))").font(.system(size: 15)).foregroundStyle(.green)
                 }
+                Button("Fill blank fields from saved research") { store.applySavedResearchDetails(to: application.id) }
+                    .buttonStyle(.bordered)
+                    .font(.system(size: 15))
             }
             .padding(12).background(application.applicationDetailsVerified ? Color.green.opacity(0.10) : Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
 

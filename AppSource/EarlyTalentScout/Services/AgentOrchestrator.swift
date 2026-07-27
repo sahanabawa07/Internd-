@@ -156,7 +156,18 @@ actor AgentOrchestrator {
     }
 
     private func strongestReport(ranked: ResearchReport?, verified: ResearchReport?, raw: ResearchReport?, discovery: ResearchReport?) -> ResearchReport {
-        let fallback = verified ?? raw ?? ResearchReport.empty
+        // A verifier can legitimately return an empty JSON list when it has trouble
+        // reading a page. Do not let that erase the Program Researcher's concrete
+        // candidates; they still have their official links and are shown as needing
+        // verification rather than being silently turned into watch-list companies.
+        let fallback: ResearchReport
+        if let verified, !verified.opportunities.isEmpty {
+            fallback = verified
+        } else if let raw, !raw.opportunities.isEmpty {
+            fallback = raw
+        } else {
+            fallback = ResearchReport.empty
+        }
         let discoveryFallback = discovery ?? ResearchReport.empty
         let rankedReport = ranked ?? ResearchReport.empty
         let chosenOpportunities = !rankedReport.opportunities.isEmpty ? rankedReport.opportunities : fallback.opportunities

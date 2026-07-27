@@ -26,10 +26,12 @@ actor AgentOrchestrator {
         let context = "Resume analysis:\n\(try await profileAnalysis)\n\nCareer strategy:\n\(try await strategy)"
         async let researcher = ask(researchPrompt(profile: profile, context: context), web: true, name: "Program Researcher", progress: onProgress)
         async let discovery = ask(discoveryPrompt(profile: profile, context: context), web: true, name: "Ecosystem Scout", progress: onProgress)
-        let rawPrograms = try await researcher
-        let discoveryResults = try await discovery
-        let verified = try await ask(verificationPrompt(candidateJSON: rawPrograms), web: true, name: "Link Verifier", progress: onProgress)
-        let ranked = try await ask(rankingPrompt(profile: profile, verifiedJSON: verified, discoveryJSON: discoveryResults), web: false, name: "Opportunity Ranker", progress: onProgress)
+        // Later agents refine a search but must never erase an otherwise useful run.
+        // A partial result is better than a blank Research screen.
+        let rawPrograms = (try? await researcher) ?? "{\"opportunities\":[]}"
+        let discoveryResults = (try? await discovery) ?? "{\"suggested_companies\":[],\"networking_leads\":[],\"watch_companies\":[]}"
+        let verified = (try? await ask(verificationPrompt(candidateJSON: rawPrograms), web: true, name: "Link Verifier", progress: onProgress)) ?? "{\"opportunities\":[]}"
+        let ranked = (try? await ask(rankingPrompt(profile: profile, verifiedJSON: verified, discoveryJSON: discoveryResults), web: false, name: "Opportunity Ranker", progress: onProgress)) ?? "{}"
         let rawReport = try? decodeReport(rawPrograms)
         let verifiedReport = try? decodeReport(verified)
         let discoveryReport = try? decodeReport(discoveryResults)
@@ -170,14 +172,67 @@ actor AgentOrchestrator {
         }
         let discoveryFallback = discovery ?? ResearchReport.empty
         let rankedReport = ranked ?? ResearchReport.empty
-        let chosenOpportunities = !rankedReport.opportunities.isEmpty ? rankedReport.opportunities : fallback.opportunities
-        let chosenSuggestions = !rankedReport.suggestedCompanies.isEmpty ? rankedReport.suggestedCompanies : discoveryFallback.suggestedCompanies
+        let fetchedOpportunities = !rankedReport.opportunities.isEmpty ? rankedReport.opportunities : fallback.opportunities
+        let fetchedSuggestions = !rankedReport.suggestedCompanies.isEmpty ? rankedReport.suggestedCompanies : discoveryFallback.suggestedCompanies
+        let library = researchLibrary()
+        let chosenOpportunities = merge(fetchedOpportunities, with: library.opportunities)
+        let chosenSuggestions = merge(fetchedSuggestions, with: library.suggestedCompanies)
         let chosenNetworking = !rankedReport.networkingLeads.isEmpty ? rankedReport.networkingLeads : discoveryFallback.networkingLeads
         let chosenWatch = !rankedReport.watchCompanies.isEmpty ? rankedReport.watchCompanies : discoveryFallback.watchCompanies
         let chosenSkills = !rankedReport.skillSuggestions.isEmpty ? rankedReport.skillSuggestions : fallback.skillSuggestions
         let chosenDirections = !rankedReport.careerSuggestions.isEmpty ? rankedReport.careerSuggestions : fallback.careerSuggestions
         let chosenNotes = !rankedReport.researchNotes.isEmpty ? rankedReport.researchNotes : fallback.researchNotes
         return ResearchReport(careerSuggestions: chosenDirections, opportunities: chosenOpportunities, suggestedCompanies: chosenSuggestions, networkingLeads: chosenNetworking, watchCompanies: chosenWatch, skillSuggestions: chosenSkills, researchNotes: chosenNotes)
+    }
+
+    private func merge<T: Identifiable>(_ primary: [T], with additions: [T]) -> [T] where T.ID: Hashable {
+        var seen = Set<T.ID>()
+        return (primary + additions).filter { seen.insert($0.id).inserted }
+    }
+
+    // A small, source-linked planning library prevents a transient web-search or
+    // JSON-verification failure from leaving a student with only company names.
+    // Every item is shown as "Expected / recurring" until a live posting is found.
+    private func researchLibrary() -> ResearchReport {
+        func opportunity(_ company: String, _ program: String, _ area: String, _ url: String, _ note: String) -> Opportunity {
+            let officialURL = URL(string: url)!
+            return Opportunity(
+                company: company, program: program, careerArea: area,
+                fitReason: "A widely recognized early-talent pathway worth preparing for and checking each cycle.",
+                eligibility: "Confirm current eligibility and timing on the official program page.",
+                location: "See official program page", status: "recurring_watch", postingDate: nil, deadline: nil,
+                applicationURL: nil, officialProgramURL: officialURL, linkedInURL: nil,
+                sourceNotes: "Internd planning-library lead. This is not marked open; use the official page to confirm the next cycle.",
+                expectedApplicationTiming: "Monitor the official page and prepare before the next recruiting cycle.",
+                preparationChecklist: ["Save the official page", "Prepare a truthful one-page resume", "Set a reminder to check the next cycle"],
+                resumeFocus: ["Relevant coursework", "Projects or analytical experience", "Leadership and impact"],
+                skillFocus: ["Role-specific fundamentals"], officialSourceType: "Official program or careers page",
+                verifiedFacts: [VerifiedFact(label: "Planning status", value: "Confirm the next application cycle on the linked official page.", classification: "guidance", sourceURL: officialURL)]
+            )
+        }
+
+        let opportunities = [
+            opportunity("Microsoft", "Explore Microsoft", "Technology · software engineering and program management", "https://careers.microsoft.com/v2/global/en/exploremicrosoft", "First- and second-year technology internship pathway."),
+            opportunity("Google", "STEP Internship", "Technology · software engineering", "https://buildyourfuture.withgoogle.com/programs/step/", "Early undergraduate software-engineering pathway."),
+            opportunity("NVIDIA", "NVIDIA Ignite", "Technology · engineering", "https://www.nvidia.com/en-us/industries/higher-education-research/ignite/", "Early-career technical pre-internship pathway."),
+            opportunity("Goldman Sachs", "Possibilities Series", "Financial services", "https://www.goldmansachs.com/careers/students/programs-and-internships/americas/possibilities-series", "Early financial-services exploration program."),
+            opportunity("JPMorganChase", "Early Insights Programs", "Financial services", "https://www.jpmorganchase.com/careers/students/programs", "Explore the firm's student programs and early-insight events."),
+            opportunity("Citadel", "Citadel Discover", "Quantitative finance and trading", "https://www.citadel.com/careers/students/", "Student pathway worth monitoring for early-career programming."),
+            opportunity("Jane Street", "First-Year Programs and Events", "Quantitative trading and technology", "https://www.janestreet.com/join-jane-street/programs-and-events/", "First- and second-year exploration and event pathways."),
+            opportunity("BlackRock", "Students and Graduates Programs", "Asset management and finance", "https://careers.blackrock.com/students-and-graduates", "Student recruiting hub to monitor for early-talent pathways."),
+            opportunity("Girls Who Invest", "Summer Intensive Program", "Investment management", "https://www.girlswhoinvest.org/summer-intensive-program/", "Investment-management education and career-access program."),
+            opportunity("SEO", "SEO Career", "Finance, consulting, and technology", "https://www.seo-usa.org/career/", "Career-access program with employer connections."),
+            opportunity("INROADS", "INROADS Career Pathways", "Multiple industries", "https://inroads.org/", "Career development and internship-access pathway."),
+            opportunity("Management Leadership for Tomorrow", "MLT Career Prep", "Business, consulting, and technology", "https://mlt.org/career-prep/", "Career preparation and employer-access program.")
+        ]
+        let suggestions = [
+            CompanySuggestion(company: "Jane Street", category: "Quantitative trading", whyItFits: "Explore quantitative trading and technology pathways beyond traditional internships.", earlyTalentPathway: "Review first-year programs and events.", officialCareersURL: URL(string: "https://www.janestreet.com/join-jane-street/programs-and-events/")),
+            CompanySuggestion(company: "BlackRock", category: "Asset management", whyItFits: "A strong investing and markets pathway to investigate alongside banking.", earlyTalentPathway: "Monitor student and graduate programs.", officialCareersURL: URL(string: "https://careers.blackrock.com/students-and-graduates")),
+            CompanySuggestion(company: "Citadel", category: "Quantitative finance", whyItFits: "Relevant for analytical, markets, and quantitative interests.", earlyTalentPathway: "Monitor student programs and campus events.", officialCareersURL: URL(string: "https://www.citadel.com/careers/students/")),
+            CompanySuggestion(company: "Girls Who Invest", category: "Investment management access", whyItFits: "An access and education pathway into investing careers.", earlyTalentPathway: "Review the Summer Intensive Program.", officialCareersURL: URL(string: "https://www.girlswhoinvest.org/summer-intensive-program/")),
+            CompanySuggestion(company: "SEO Career", category: "Career access", whyItFits: "Can expand access to finance, consulting, and technology opportunities.", earlyTalentPathway: "Review program eligibility and cycle timing.", officialCareersURL: URL(string: "https://www.seo-usa.org/career/"))
+        ]
+        return ResearchReport(careerSuggestions: [], opportunities: opportunities, suggestedCompanies: suggestions, networkingLeads: [], watchCompanies: [], skillSuggestions: [], researchNotes: ["Planning-library leads are marked Expected / recurring until the official source confirms a live application."])
     }
 
     private struct LooseResearchReport: Decodable {

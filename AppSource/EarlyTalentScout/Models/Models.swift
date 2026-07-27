@@ -142,6 +142,9 @@ struct WatchCompany: Codable, Identifiable, Hashable {
     var reason: String
     var officialCareersURL: URL?
     var lastChecked: Date = .now
+    // These are research leads, not a claim that an application is currently open.
+    // Optional keeps workspaces created by earlier app versions compatible.
+    var programLeads: [Opportunity]? = nil
 }
 
 struct SkillSuggestion: Codable, Identifiable, Hashable {

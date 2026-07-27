@@ -83,6 +83,30 @@ struct ResearchView: View {
                                     Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
                                     Text("Last checked \(watch.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.system(size: 15)).foregroundStyle(.tertiary)
                                     if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 15)) }
+                                    if let leads = watch.programLeads, !leads.isEmpty {
+                                        DisclosureGroup("View \(leads.count) program lead\(leads.count == 1 ? "" : "s")") {
+                                            VStack(alignment: .leading, spacing: 10) {
+                                                ForEach(leads) { lead in
+                                                    VStack(alignment: .leading, spacing: 5) {
+                                                        Text(lead.program).font(.system(size: 18, weight: .semibold))
+                                                        Text(lead.sourceNotes).font(.system(size: 15)).foregroundStyle(.secondary)
+                                                        HStack {
+                                                            Link("Official program page", destination: lead.officialProgramURL)
+                                                            Button(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }) ? "Added to tracker" : "Add to tracker") { store.track(lead) }
+                                                                .buttonStyle(.borderedProminent)
+                                                                .tint(InterndPalette.ink)
+                                                                .disabled(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }))
+                                                        }
+                                                        .font(.system(size: 16, weight: .medium))
+                                                    }
+                                                    .padding(10)
+                                                    .background(.white.opacity(0.48), in: RoundedRectangle(cornerRadius: 12))
+                                                }
+                                            }
+                                            .padding(.top, 8)
+                                        }
+                                        .font(.system(size: 17, weight: .medium))
+                                    }
                                 }
                                 Spacer()
                             }

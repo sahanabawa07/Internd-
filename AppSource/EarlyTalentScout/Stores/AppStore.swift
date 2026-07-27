@@ -278,7 +278,9 @@ final class AppStore {
 
     private func updateWatchList(with newReport: ResearchReport) {
         let liveCompanies = Set(newReport.opportunities.map { $0.company.lowercased() })
-        watchCompanies.removeAll { liveCompanies.contains($0.company.lowercased()) }
+        func leads(for company: String) -> [Opportunity] {
+            newReport.opportunities.filter { $0.company.caseInsensitiveCompare(company) == .orderedSame }
+        }
         for watch in newReport.watchCompanies where !liveCompanies.contains(watch.company.lowercased()) {
             if let index = watchCompanies.firstIndex(where: { $0.company.caseInsensitiveCompare(watch.company) == .orderedSame }) {
                 watchCompanies[index] = watch
@@ -287,8 +289,21 @@ final class AppStore {
             }
         }
         let targets = profile.targetCompanies.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        for company in targets where !liveCompanies.contains(company.lowercased()) && !watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(company) == .orderedSame }) {
-            watchCompanies.append(WatchCompany(company: company, reason: "No credible sophomore-accessible early-talent pathway was identified during this check.", officialCareersURL: nil))
+        for company in targets {
+            let companyLeads = leads(for: company)
+            if let index = watchCompanies.firstIndex(where: { $0.company.caseInsensitiveCompare(company) == .orderedSame }) {
+                watchCompanies[index].programLeads = companyLeads
+                if !companyLeads.isEmpty {
+                    watchCompanies[index].reason = "Internd found \(companyLeads.count) program lead\(companyLeads.count == 1 ? "" : "s") for this company. Open the card to review each one."
+                }
+            } else {
+                watchCompanies.append(WatchCompany(
+                    company: company,
+                    reason: companyLeads.isEmpty ? "No credible sophomore-accessible early-talent pathway was identified during this check." : "Internd found \(companyLeads.count) program lead\(companyLeads.count == 1 ? "" : "s") for this company. Open the card to review each one.",
+                    officialCareersURL: companyLeads.first?.officialProgramURL,
+                    programLeads: companyLeads
+                ))
+            }
         }
         persistApplications()
     }

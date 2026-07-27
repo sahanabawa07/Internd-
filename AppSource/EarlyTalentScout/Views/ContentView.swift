@@ -29,7 +29,8 @@ struct ContentView: View {
         .alert("Research issue", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(store.errorMessage ?? "") }
-        .dynamicTypeSize(.xLarge)
+        .dynamicTypeSize(.accessibility1)
+        .controlSize(.large)
     }
 
     private var workspace: some View {

@@ -122,13 +122,42 @@ final class AppStore {
     func createOutreach(for contact: NetworkContact, opportunity: ApplicationRecord?) async {
         guard !apiKey.isEmpty else { errorMessage = "Add an API key in Settings first."; return }
         do {
-            outreachDrafts.insert(try await AgentOrchestrator(apiKey: apiKey).draftOutreach(profile: profile, contact: contact, opportunity: opportunity, template: outreachTemplate), at: 0)
+            var draft = try await AgentOrchestrator(apiKey: apiKey).draftOutreach(profile: profile, contact: contact, opportunity: opportunity, template: outreachTemplate)
+            draft.opportunityID = opportunity?.id
+            draft.profileURL = contact.profileURL
+            draft.contactCompany = contact.company
+            outreachDrafts.insert(draft, at: 0)
             if !relationships.contains(where: { $0.name == contact.name && $0.company == contact.company }) {
                 relationships.append(RelationshipRecord(name: contact.name, company: contact.company, sharedContext: contact.sharedContext))
                 persistApplications()
             }
+            selection = .outreach
         }
         catch { errorMessage = error.localizedDescription }
+    }
+
+    func markOutreachSent(_ draft: OutreachDraft) {
+        let today = Date.now
+        let followUp = Calendar.current.date(byAdding: .day, value: 7, to: today) ?? today
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        let dateText = formatter.string(from: today)
+        let followUpText = formatter.string(from: followUp)
+
+        if let relationshipIndex = relationships.firstIndex(where: { $0.name == draft.recipientName && $0.company == draft.contactCompany }) {
+            relationships[relationshipIndex].lastContact = dateText
+            relationships[relationshipIndex].followUpDate = followUpText
+            relationships[relationshipIndex].relationshipStrength = "Message sent"
+        } else {
+            relationships.append(RelationshipRecord(name: draft.recipientName, company: draft.contactCompany, sharedContext: "Outreach draft sent", lastContact: dateText, followUpDate: followUpText, relationshipStrength: "Message sent"))
+        }
+
+        if let applicationID = draft.opportunityID, let index = applications.firstIndex(where: { $0.id == applicationID }) {
+            applications[index].outreachPrepared = true
+            applications[index].outreachStatus = "Message sent to \(draft.recipientName) · follow up \(followUpText)"
+            updateStage(for: index)
+        }
+        persistApplications()
     }
 
     func track(_ opportunity: Opportunity) {

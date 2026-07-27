@@ -8,6 +8,10 @@ struct DashboardView: View {
     }
 
     private var taskApps: [ApplicationRecord] { Array(priorityApps.prefix(4)) }
+    private var plannedFollowUps: [RelationshipRecord] {
+        store.relationships.filter { !$0.followUpDate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted { (daysUntil($0.followUpDate) ?? .max) < (daysUntil($1.followUpDate) ?? .max) }
+    }
 
     var body: some View {
         ScrollView {
@@ -31,6 +35,9 @@ struct DashboardView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Next actions").font(.title3.weight(.semibold))
+                    ForEach(plannedFollowUps.prefix(2)) { relationship in
+                        TodayAction(icon: "paperplane", title: "Follow up with \(relationship.name)", detail: "\(relationship.company) · scheduled \(relationship.followUpDate)", action: { store.selection = .network })
+                    }
                     if taskApps.isEmpty {
                         TodayAction(icon: "sparkle.magnifyingglass", title: store.report.opportunities.isEmpty ? "Set up your profile, then let Internd research" : "Choose a program to add to your tracker", detail: store.report.opportunities.isEmpty ? "Add your interests, targets, and API key. Results refresh when you open Internd." : "Your official links are waiting in Research.", action: { store.selection = store.report.opportunities.isEmpty ? .profile : .research })
                     } else {

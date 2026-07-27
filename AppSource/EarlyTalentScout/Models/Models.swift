@@ -182,10 +182,13 @@ struct TailoredResume: Codable {
 }
 
 struct OutreachDraft: Codable, Identifiable {
-    let recipientName: String
-    let subject: String
-    let message: String
-    let rationale: String
+    var recipientName: String
+    var subject: String
+    var message: String
+    var rationale: String
+    var opportunityID: UUID?
+    var profileURL: URL?
+    var contactCompany: String = ""
     var id: String { "\(recipientName)-\(subject)" }
 }
 

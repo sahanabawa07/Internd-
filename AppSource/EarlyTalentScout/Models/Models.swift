@@ -90,11 +90,12 @@ struct ResearchReport: Codable {
     let careerSuggestions: [CareerDirection]
     let opportunities: [Opportunity]
     let suggestedCompanies: [CompanySuggestion]
+    let networkingLeads: [NetworkingLead]
     let watchCompanies: [WatchCompany]
     let skillSuggestions: [SkillSuggestion]
     let researchNotes: [String]
 
-    static let empty = ResearchReport(careerSuggestions: [], opportunities: [], suggestedCompanies: [], watchCompanies: [], skillSuggestions: [], researchNotes: [])
+    static let empty = ResearchReport(careerSuggestions: [], opportunities: [], suggestedCompanies: [], networkingLeads: [], watchCompanies: [], skillSuggestions: [], researchNotes: [])
 }
 
 struct CompanySuggestion: Codable, Identifiable, Hashable {
@@ -104,6 +105,17 @@ struct CompanySuggestion: Codable, Identifiable, Hashable {
     var whyItFits: String
     var earlyTalentPathway: String
     var officialCareersURL: URL?
+}
+
+struct NetworkingLead: Codable, Identifiable, Hashable {
+    var id: String { organization.lowercased() }
+    var organization: String
+    var category: String
+    var whyNetwork: String
+    var outreachAngle: String
+    var officialURL: URL?
+    var status: String = "Not started"
+    var lastChecked: Date = .now
 }
 
 struct WatchCompany: Codable, Identifiable, Hashable {

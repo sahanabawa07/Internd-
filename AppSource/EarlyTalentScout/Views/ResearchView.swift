@@ -54,6 +54,17 @@ struct ResearchView: View {
                     }
                 }
 
+                if !store.networkingLeads.isEmpty {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("Networking-first leads").font(.title3.weight(.semibold))
+                        Text("These organizations may not have a clear formal internship. Use them for informed conversations and relationship building—never assume an unofficial role exists.")
+                            .foregroundStyle(.secondary)
+                        ForEach(store.networkingLeads) { lead in
+                            NetworkingLeadCard(lead: lead, research: { store.startCompanyResearch(for: lead) }, network: { store.startNetworking(for: lead) })
+                        }
+                    }
+                }
+
                 if !store.watchCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
                         Text("Watch list").font(.title3.weight(.semibold))
@@ -90,6 +101,39 @@ struct ResearchView: View {
             }
             .padding(22)
         }
+    }
+}
+
+private struct NetworkingLeadCard: View {
+    let lead: NetworkingLead
+    let research: () -> Void
+    let network: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lead.organization).font(.headline)
+                    Text(lead.category).font(.caption.weight(.medium)).foregroundStyle(InterndPalette.ink)
+                }
+                Spacer()
+                Text(lead.status).font(.caption).foregroundStyle(.secondary)
+            }
+            Text(lead.whyNetwork).font(.subheadline)
+            Text("Conversation angle: \(lead.outreachAngle)").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Research organization", action: research).buttonStyle(.bordered)
+                Link("Find people on LinkedIn", destination: linkedInSearchURL).buttonStyle(.bordered)
+                Button("Save a contact", action: network).buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+            }
+            if let url = lead.officialURL { Link("Official website", destination: url).font(.caption.weight(.medium)) }
+        }
+        .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
+    }
+
+    private var linkedInSearchURL: URL {
+        let query = lead.organization.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lead.organization
+        return URL(string: "https://www.linkedin.com/search/results/people/?keywords=\(query)")!
     }
 }
 

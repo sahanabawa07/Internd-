@@ -42,6 +42,9 @@ struct CompanyResearchView: View {
                 Section { Text(brief.sourceCaveat).font(.caption).foregroundStyle(.secondary) }
             }
         }
+        .onAppear {
+            if company.isEmpty, !store.companyResearchTarget.isEmpty { company = store.companyResearchTarget }
+        }
     }
 }
 

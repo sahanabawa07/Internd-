@@ -4,6 +4,10 @@ import UniformTypeIdentifiers
 struct NetworkView: View {
     let store: AppStore
     @State private var showingImporter = false
+    @State private var manualName = ""
+    @State private var manualCompany = ""
+    @State private var manualContext = ""
+    @State private var manualProfileURL = ""
 
     var body: some View {
         @Bindable var store = store
@@ -12,6 +16,20 @@ struct NetworkView: View {
                 Text("Export your LinkedIn connections as a CSV, then import it here. The Network Scout identifies relevant people using that export and public alumni context. It does not access your logged-in LinkedIn account.")
                     .foregroundStyle(.secondary)
                 Button("Import LinkedIn connections CSV") { showingImporter = true }
+            }
+            Section("Add a LinkedIn contact") {
+                if !store.networkLeadOrganization.isEmpty {
+                    Text("For your networking-first lead: find a real person at \(store.networkLeadOrganization) on LinkedIn, then save them here to draft a message.")
+                        .foregroundStyle(.secondary)
+                }
+                TextField("Name", text: $manualName)
+                TextField("Organization", text: $manualCompany)
+                TextField("Shared context (optional)", text: $manualContext)
+                TextField("LinkedIn profile URL (optional)", text: $manualProfileURL)
+                Button("Save contact") {
+                    store.addManualContact(name: manualName, company: manualCompany, sharedContext: manualContext, profileURLText: manualProfileURL)
+                    manualName = ""; manualCompany = ""; manualContext = ""; manualProfileURL = ""
+                }.disabled(manualName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || manualCompany.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             Section("Suggested contacts") {
                 if store.networkContacts.isEmpty {
@@ -41,6 +59,10 @@ struct NetworkView: View {
                         HStack { TextField("Last contact", text: $relationship.lastContact); TextField("Follow up", text: $relationship.followUpDate) }
                         TextField("Relationship", text: $relationship.relationshipStrength)
                         TextField("Conversation notes", text: $relationship.notes)
+                        Button("Draft message") {
+                            let contact = NetworkContact(name: relationship.name, headline: "", company: relationship.company, sharedContext: relationship.sharedContext, profileURL: nil, reachOutReason: "A saved networking relationship.")
+                            Task { await store.createOutreach(for: contact, opportunity: nil) }
+                        }.buttonStyle(.borderless)
                     }.padding(.vertical, 4)
                 }
             }
@@ -57,5 +79,6 @@ struct NetworkView: View {
             } catch { store.errorMessage = "Could not read the connections CSV." }
         }
         .onChange(of: store.relationships) { _, _ in store.persistApplications() }
+        .onAppear { if manualCompany.isEmpty { manualCompany = store.networkLeadOrganization } }
     }
 }

@@ -9,11 +9,14 @@ final class AppStore {
     var networkContacts: [NetworkContact] = []
     var applications: [ApplicationRecord]
     var relationships: [RelationshipRecord]
+    var networkingLeads: [NetworkingLead]
     var watchCompanies: [WatchCompany]
     var dismissedOpportunityIDs: Set<String>
     var tailoredResume: TailoredResume?
     var resumeTailorContext = ""
     var skillsPlanTarget = ""
+    var companyResearchTarget = ""
+    var networkLeadOrganization = ""
     var outreachDrafts: [OutreachDraft] = []
     var outreachTemplate = "Hi {first_name}, I noticed we share {shared_context}. I’m exploring {career_interest} and would appreciate 15 minutes to hear about your experience at {company}. Thank you!"
     var skillsPlan: SkillsPlan?
@@ -33,6 +36,7 @@ final class AppStore {
         profile = workspace.profile
         applications = workspace.applications
         relationships = workspace.relationships
+        networkingLeads = workspace.networkingLeads
         watchCompanies = workspace.watchCompanies
         dismissedOpportunityIDs = Set(workspace.dismissedOpportunityIDs)
     }
@@ -71,6 +75,7 @@ final class AppStore {
                 await MainActor.run { self?.updateAgent(name: name, status: status) }
             }
             updateWatchList(with: report)
+            updateNetworkingLeads(with: report.networkingLeads)
             if openResearchWhenFinished { selection = .research }
         } catch {
             errorMessage = error.localizedDescription
@@ -91,6 +96,21 @@ final class AppStore {
         } catch { errorMessage = error.localizedDescription }
     }
 
+    func addManualContact(name: String, company: String, sharedContext: String, profileURLText: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCompany = company.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !trimmedCompany.isEmpty else { return }
+        let contact = NetworkContact(name: trimmedName, headline: "", company: trimmedCompany, sharedContext: sharedContext.isEmpty ? "Found through LinkedIn" : sharedContext, profileURL: URL(string: profileURLText.trimmingCharacters(in: .whitespacesAndNewlines)), reachOutReason: "A real contact the user identified for this organization.")
+        if !networkContacts.contains(contact) { networkContacts.append(contact) }
+        if !relationships.contains(where: { $0.name == trimmedName && $0.company == trimmedCompany }) {
+            relationships.append(RelationshipRecord(name: trimmedName, company: trimmedCompany, sharedContext: contact.sharedContext))
+        }
+        if let index = networkingLeads.firstIndex(where: { $0.organization.caseInsensitiveCompare(trimmedCompany) == .orderedSame }) {
+            networkingLeads[index].status = "Contact saved"
+        }
+        persistApplications()
+    }
+
     func tailorResume(for description: String) async {
         guard profile.isReady, !apiKey.isEmpty else { errorMessage = "Add a resume or interests, then save an API key in Settings."; return }
         do { tailoredResume = try await AgentOrchestrator(apiKey: apiKey).tailorResume(profile: profile, jobDescription: description) }
@@ -107,6 +127,20 @@ final class AppStore {
         guard !company.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !apiKey.isEmpty else { errorMessage = "Enter a company and save an API key in Settings."; return }
         do { companyBrief = try await AgentOrchestrator(apiKey: apiKey).researchCompany(company, interests: profile.careerInterests) }
         catch { errorMessage = error.localizedDescription }
+    }
+
+    func startCompanyResearch(for lead: NetworkingLead) {
+        companyResearchTarget = lead.organization
+        selection = .companies
+    }
+
+    func startNetworking(for lead: NetworkingLead) {
+        networkLeadOrganization = lead.organization
+        if let index = networkingLeads.firstIndex(where: { $0.id == lead.id }) {
+            networkingLeads[index].status = "Finding contact"
+            persistApplications()
+        }
+        selection = .network
     }
 
     func runQualityCheck(application: ApplicationRecord, materials: String) async {
@@ -236,11 +270,25 @@ final class AppStore {
         persistApplications()
     }
 
-    func persistApplications() { TrackerPersistence.save(profile: profile, applications: applications, relationships: relationships, watchCompanies: watchCompanies, dismissedOpportunityIDs: dismissedOpportunityIDs) }
+    private func updateNetworkingLeads(with incoming: [NetworkingLead]) {
+        for lead in incoming {
+            if let index = networkingLeads.firstIndex(where: { $0.id == lead.id }) {
+                let savedStatus = networkingLeads[index].status
+                networkingLeads[index] = lead
+                networkingLeads[index].status = savedStatus
+            } else {
+                networkingLeads.append(lead)
+            }
+        }
+        persistApplications()
+    }
+
+    func persistApplications() { TrackerPersistence.save(profile: profile, applications: applications, relationships: relationships, networkingLeads: networkingLeads, watchCompanies: watchCompanies, dismissedOpportunityIDs: dismissedOpportunityIDs) }
 
     func deleteLocalData() {
         applications = []
         relationships = []
+        networkingLeads = []
         networkContacts = []
         outreachDrafts = []
         watchCompanies = []

@@ -21,7 +21,7 @@ struct TrackerView: View {
                 if store.applications.isEmpty {
                     ContentUnavailableView("Nothing is in your tracker yet", systemImage: "checklist", description: Text("Choose Add to tracker on a research result to keep its official link and details here."))
                 } else {
-                    Text("Click a row to open its full details, requirements, sources, preparation checklist, and outreach plan.")
+                    Text("Use View details for any application to review the source, confirm its information, and manage outreach and preparation.")
                         .font(.system(size: 15)).foregroundStyle(.secondary)
                     applicationTable
                     if let selectedIndex = store.applications.firstIndex(where: { $0.id == selectedApplicationID }) {
@@ -54,14 +54,16 @@ struct TrackerView: View {
                     tableHeader("Requirements", width: 230)
                     tableHeader("Contacts", width: 110)
                     tableHeader("Prep", width: 80)
+                    tableHeader("Verification", width: 115)
                     tableHeader("Link", width: 100)
+                    tableHeader("Details", width: 105)
                 }
-                Divider().gridCellColumns(9)
+                Divider().gridCellColumns(11)
                 ForEach(store.applications.indices, id: \.self) { index in
                     ApplicationTableRow(store: store, application: Binding(get: { store.applications[index] }, set: { store.applications[index] = $0 }), isSelected: selectedApplicationID == store.applications[index].id) {
                         selectedApplicationID = store.applications[index].id
                     }
-                    Divider().gridCellColumns(9)
+                    Divider().gridCellColumns(11)
                 }
             }
             .padding(14)
@@ -98,10 +100,17 @@ private struct ApplicationTableRow: View {
                 .font(.system(size: 15)).frame(width: 110, alignment: .leading)
             Text("\(application.preparationProgress)/4")
                 .font(.system(size: 15, weight: .medium)).frame(width: 80, alignment: .leading)
+            Label(application.applicationDetailsVerified ? "Verified" : "Review", systemImage: application.applicationDetailsVerified ? "checkmark.seal.fill" : "exclamationmark.circle")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(application.applicationDetailsVerified ? .green : .orange)
+                .frame(width: 115, alignment: .leading)
             Group {
                 if let url = application.applicationURL { Link("Open", destination: url) }
                 else { Text("—").foregroundStyle(.secondary) }
             }.frame(width: 100, alignment: .leading)
+            Button("View details", action: select)
+                .buttonStyle(.bordered)
+                .frame(width: 105, alignment: .leading)
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 5)
@@ -129,6 +138,20 @@ private struct ApplicationCard: View {
             }
             if !application.description.isEmpty { Text(application.description).font(.system(size: 17)) }
             if !application.whyThisMatches.isEmpty { Label("Why this matches you: \(application.whyThisMatches)", systemImage: "sparkles").font(.system(size: 17)).foregroundStyle(.secondary) }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Verify before applying").font(.system(size: 20, weight: .semibold))
+                Text("Posting date, deadline, requirements, and links shown here come from Internd research or from what you entered. Open the official page and confirm them before relying on them.")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                Toggle("I opened the official application and verified these details", isOn: $application.applicationDetailsVerified)
+                    .onChange(of: application.applicationDetailsVerified) { _, verified in
+                        application.applicationDetailsVerifiedAt = verified ? .now : nil
+                    }
+                if let date = application.applicationDetailsVerifiedAt {
+                    Text("Verified by you on \(date.formatted(date: .abbreviated, time: .shortened))").font(.system(size: 15)).foregroundStyle(.green)
+                }
+            }
+            .padding(12).background(application.applicationDetailsVerified ? Color.green.opacity(0.10) : Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
 
             HStack {
                 TextField("Posting date", text: $application.postingDate)

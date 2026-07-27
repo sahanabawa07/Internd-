@@ -27,7 +27,10 @@ actor AgentOrchestrator {
         let researcher = try await ask(researchPrompt(profile: profile, context: context), web: true, name: "Program Researcher", progress: onProgress)
         let verified = try await ask(verificationPrompt(candidateJSON: researcher), web: true, name: "Link Verifier", progress: onProgress)
         let ranked = try await ask(rankingPrompt(profile: profile, verifiedJSON: verified), web: false, name: "Opportunity Ranker", progress: onProgress)
-        return try decodeReport(ranked)
+        let rawReport = try? decodeReport(researcher)
+        let verifiedReport = try? decodeReport(verified)
+        let rankedReport = try? decodeReport(ranked)
+        return strongestReport(ranked: rankedReport, verified: verifiedReport, raw: rawReport)
     }
 
     private func ask(_ prompt: String, web: Bool, name: String, progress: @Sendable (String, AgentProgress.Status) async -> Void) async throws -> String {
@@ -148,6 +151,19 @@ actor AgentOrchestrator {
             skillSuggestions: skills,
             researchNotes: loose.researchNotes ?? []
         )
+    }
+
+    private func strongestReport(ranked: ResearchReport?, verified: ResearchReport?, raw: ResearchReport?) -> ResearchReport {
+        let fallback = verified ?? raw ?? ResearchReport.empty
+        let rankedReport = ranked ?? ResearchReport.empty
+        let chosenOpportunities = !rankedReport.opportunities.isEmpty ? rankedReport.opportunities : fallback.opportunities
+        let chosenSuggestions = !rankedReport.suggestedCompanies.isEmpty ? rankedReport.suggestedCompanies : fallback.suggestedCompanies
+        let chosenNetworking = !rankedReport.networkingLeads.isEmpty ? rankedReport.networkingLeads : fallback.networkingLeads
+        let chosenWatch = !rankedReport.watchCompanies.isEmpty ? rankedReport.watchCompanies : fallback.watchCompanies
+        let chosenSkills = !rankedReport.skillSuggestions.isEmpty ? rankedReport.skillSuggestions : fallback.skillSuggestions
+        let chosenDirections = !rankedReport.careerSuggestions.isEmpty ? rankedReport.careerSuggestions : fallback.careerSuggestions
+        let chosenNotes = !rankedReport.researchNotes.isEmpty ? rankedReport.researchNotes : fallback.researchNotes
+        return ResearchReport(careerSuggestions: chosenDirections, opportunities: chosenOpportunities, suggestedCompanies: chosenSuggestions, networkingLeads: chosenNetworking, watchCompanies: chosenWatch, skillSuggestions: chosenSkills, researchNotes: chosenNotes)
     }
 
     private struct LooseResearchReport: Decodable {

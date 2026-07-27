@@ -12,6 +12,8 @@ final class AppStore {
     var watchCompanies: [WatchCompany]
     var dismissedOpportunityIDs: Set<String>
     var tailoredResume: TailoredResume?
+    var resumeTailorContext = ""
+    var skillsPlanTarget = ""
     var outreachDrafts: [OutreachDraft] = []
     var outreachTemplate = "Hi {first_name}, I noticed we share {shared_context}. I’m exploring {career_interest} and would appreciate 15 minutes to hear about your experience at {company}. Thank you!"
     var skillsPlan: SkillsPlan?
@@ -163,8 +165,18 @@ final class AppStore {
     func track(_ opportunity: Opportunity) {
         guard !applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }) else { return }
         let contacts = suggestedContacts(for: opportunity.company).map(\.id)
-        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts))
+        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts, preparationChecklist: opportunity.preparationChecklist, resumeFocus: opportunity.resumeFocus, skillFocus: opportunity.skillFocus))
         persistApplications()
+    }
+
+    func startResumeTailor(for application: ApplicationRecord) {
+        resumeTailorContext = "Target program: \(application.program) at \(application.company)\n\nKnown or expected application details:\n\(application.requirements)\n\nResume focus:\n\(application.resumeFocus.joined(separator: "\n• "))\n\nPreparation guidance:\n\(application.preparationChecklist.joined(separator: "\n• "))"
+        selection = .tailor
+    }
+
+    func startSkillsPlan(for application: ApplicationRecord) {
+        skillsPlanTarget = "\(application.program) at \(application.company). Focus skills: \(application.skillFocus.joined(separator: ", "))"
+        selection = .skills
     }
 
     func dismiss(_ opportunity: Opportunity) {

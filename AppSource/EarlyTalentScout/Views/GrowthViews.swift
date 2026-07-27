@@ -18,6 +18,9 @@ struct SkillsPlanView: View {
                 Section("Portfolio idea") { Text(plan.portfolioIdea) }
             }
         }
+        .onAppear {
+            if targetRole.isEmpty, !store.skillsPlanTarget.isEmpty { targetRole = store.skillsPlanTarget }
+        }
     }
 }
 

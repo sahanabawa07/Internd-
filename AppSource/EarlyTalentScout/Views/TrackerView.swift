@@ -60,6 +60,19 @@ private struct ApplicationCard: View {
             TextField("Application requirements", text: $application.requirements, axis: .vertical).lineLimit(2...4)
             if let url = application.applicationURL { Link("Open official application page", destination: url) }
 
+            if !application.preparationChecklist.isEmpty || !application.resumeFocus.isEmpty || !application.skillFocus.isEmpty {
+                Divider()
+                Text("Prepare before applications open").font(.headline)
+                if !application.preparationChecklist.isEmpty { LabeledContent("Preparation", value: application.preparationChecklist.joined(separator: " · ")) }
+                if !application.resumeFocus.isEmpty { LabeledContent("Resume focus", value: application.resumeFocus.joined(separator: " · ")) }
+                if !application.skillFocus.isEmpty { LabeledContent("Skills to build", value: application.skillFocus.joined(separator: " · ")) }
+                HStack {
+                    Button("Tailor resume") { store.startResumeTailor(for: application) }
+                    Button("Build skills plan") { store.startSkillsPlan(for: application) }
+                }
+                Text("For recurring programs, this is preparation guidance from current or prior-cycle information—not a promise of next cycle's requirements.").font(.caption).foregroundStyle(.secondary)
+            }
+
             Divider()
             Text("Preparation progress \(application.preparationProgress)/4").font(.headline)
             ProgressView(value: Double(application.preparationProgress), total: 4).tint(InterndPalette.ink)

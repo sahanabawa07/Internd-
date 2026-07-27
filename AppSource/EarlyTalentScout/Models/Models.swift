@@ -71,6 +71,10 @@ struct Opportunity: Codable, Identifiable, Hashable {
     let officialProgramURL: URL
     let linkedInURL: URL?
     let sourceNotes: String
+    let expectedApplicationTiming: String
+    let preparationChecklist: [String]
+    let resumeFocus: [String]
+    let skillFocus: [String]
 
     var id: String { "\(company)-\(program)" }
     var statusLabel: String {
@@ -147,14 +151,17 @@ struct ApplicationRecord: Codable, Identifiable, Hashable {
     var outreachPrepared = false
     var materialsChecked = false
     var interviewPrepDone = false
+    var preparationChecklist: [String] = []
+    var resumeFocus: [String] = []
+    var skillFocus: [String] = []
 
     enum CodingKeys: String, CodingKey {
         case id, company, program, status, postingDate, deadline, requirements, applicationURL, outreachStatus, notes
-        case description, whyThisMatches, lastChecked, suggestedContactIDs, companyResearchDone, resumeTailored, outreachPrepared, materialsChecked, interviewPrepDone
+        case description, whyThisMatches, lastChecked, suggestedContactIDs, companyResearchDone, resumeTailored, outreachPrepared, materialsChecked, interviewPrepDone, preparationChecklist, resumeFocus, skillFocus
     }
 
-    init(id: UUID = UUID(), company: String, program: String, status: String = "Saved", postingDate: String = "", deadline: String = "", requirements: String = "", applicationURL: URL? = nil, outreachStatus: String = "Not started", notes: String = "", description: String = "", whyThisMatches: String = "", lastChecked: Date = .now, suggestedContactIDs: [String] = [], companyResearchDone: Bool = false, resumeTailored: Bool = false, outreachPrepared: Bool = false, materialsChecked: Bool = false, interviewPrepDone: Bool = false) {
-        self.id = id; self.company = company; self.program = program; self.status = status; self.postingDate = postingDate; self.deadline = deadline; self.requirements = requirements; self.applicationURL = applicationURL; self.outreachStatus = outreachStatus; self.notes = notes; self.description = description; self.whyThisMatches = whyThisMatches; self.lastChecked = lastChecked; self.suggestedContactIDs = suggestedContactIDs; self.companyResearchDone = companyResearchDone; self.resumeTailored = resumeTailored; self.outreachPrepared = outreachPrepared; self.materialsChecked = materialsChecked; self.interviewPrepDone = interviewPrepDone
+    init(id: UUID = UUID(), company: String, program: String, status: String = "Saved", postingDate: String = "", deadline: String = "", requirements: String = "", applicationURL: URL? = nil, outreachStatus: String = "Not started", notes: String = "", description: String = "", whyThisMatches: String = "", lastChecked: Date = .now, suggestedContactIDs: [String] = [], companyResearchDone: Bool = false, resumeTailored: Bool = false, outreachPrepared: Bool = false, materialsChecked: Bool = false, interviewPrepDone: Bool = false, preparationChecklist: [String] = [], resumeFocus: [String] = [], skillFocus: [String] = []) {
+        self.id = id; self.company = company; self.program = program; self.status = status; self.postingDate = postingDate; self.deadline = deadline; self.requirements = requirements; self.applicationURL = applicationURL; self.outreachStatus = outreachStatus; self.notes = notes; self.description = description; self.whyThisMatches = whyThisMatches; self.lastChecked = lastChecked; self.suggestedContactIDs = suggestedContactIDs; self.companyResearchDone = companyResearchDone; self.resumeTailored = resumeTailored; self.outreachPrepared = outreachPrepared; self.materialsChecked = materialsChecked; self.interviewPrepDone = interviewPrepDone; self.preparationChecklist = preparationChecklist; self.resumeFocus = resumeFocus; self.skillFocus = skillFocus
     }
 
     init(from decoder: Decoder) throws {
@@ -178,6 +185,9 @@ struct ApplicationRecord: Codable, Identifiable, Hashable {
         outreachPrepared = try c.decodeIfPresent(Bool.self, forKey: .outreachPrepared) ?? false
         materialsChecked = try c.decodeIfPresent(Bool.self, forKey: .materialsChecked) ?? false
         interviewPrepDone = try c.decodeIfPresent(Bool.self, forKey: .interviewPrepDone) ?? false
+        preparationChecklist = try c.decodeIfPresent([String].self, forKey: .preparationChecklist) ?? []
+        resumeFocus = try c.decodeIfPresent([String].self, forKey: .resumeFocus) ?? []
+        skillFocus = try c.decodeIfPresent([String].self, forKey: .skillFocus) ?? []
     }
 
     var preparationProgress: Int { [companyResearchDone, resumeTailored, outreachPrepared, materialsChecked].filter { $0 }.count }

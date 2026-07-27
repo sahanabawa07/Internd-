@@ -21,6 +21,8 @@ struct ResumeTailorView: View {
                 Section("Check before using") { ForEach(tailored.cautions, id: \.self) { Text($0).foregroundStyle(.secondary) } }
             }
         }
+        .onAppear {
+            if description.isEmpty, !store.resumeTailorContext.isEmpty { description = store.resumeTailorContext }
+        }
     }
 }
-

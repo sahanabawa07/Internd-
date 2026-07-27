@@ -26,7 +26,7 @@ struct ResearchView: View {
                 } else if visibleOpportunities.isEmpty {
                     ContentUnavailableView("No current results", systemImage: "sparkle.magnifyingglass", description: Text(store.researchReadinessMessage ?? "Internd will refresh this list whenever you open it."))
                 } else {
-                    Text("Last checked (Date.now.formatted(date: .abbreviated, time: .shortened)) · (visibleOpportunities.count) programs shown")
+                    Text("Last checked \(Date.now.formatted(date: .abbreviated, time: .shortened)) · \(visibleOpportunities.count) programs shown")
                         .font(.caption).foregroundStyle(.secondary)
                     ForEach(visibleOpportunities) { opportunity in
                         OpportunityCard(
@@ -65,7 +65,7 @@ struct ResearchView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(watch.company).font(.headline)
                                     Text(watch.reason).font(.subheadline).foregroundStyle(.secondary)
-                                    Text("Last checked (watch.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.tertiary)
+                                    Text("Last checked \(watch.lastChecked.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.tertiary)
                                     if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.caption) }
                                 }
                                 Spacer()
@@ -147,6 +147,12 @@ private struct OpportunityCard: View {
                 Label(opportunity.location, systemImage: "mappin.and.ellipse")
             }.font(.caption).foregroundStyle(.secondary)
             Text("Eligibility & requirements: \(opportunity.eligibility)").font(.caption).foregroundStyle(.secondary)
+            if opportunity.status == "recurring_watch" {
+                Label("Expected timing: \(opportunity.expectedApplicationTiming)", systemImage: "calendar.badge.clock").font(.caption).foregroundStyle(.secondary)
+                if !opportunity.preparationChecklist.isEmpty {
+                    Text("Prepare now: \(opportunity.preparationChecklist.joined(separator: " · "))").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             HStack {
                 if let date = opportunity.postingDate { Text("Posted: \(date)") }
                 if let deadline = opportunity.deadline { Text("Deadline: \(deadline)") }

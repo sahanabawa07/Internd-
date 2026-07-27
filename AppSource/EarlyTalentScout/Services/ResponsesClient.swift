@@ -21,7 +21,7 @@ struct ResponsesClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         var body: [String: Any] = ["model": model, "input": prompt]
         if useWebSearch {
-            body["tools"] = [["type": "web_search", "search_context_size": "low"]]
+            body["tools"] = [["type": "web_search", "search_context_size": "medium"]]
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

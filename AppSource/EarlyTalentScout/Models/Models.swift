@@ -76,7 +76,7 @@ struct Opportunity: Codable, Identifiable, Hashable {
     var statusLabel: String {
         switch status {
         case "open": "Open"
-        case "recurring_watch": "Watch"
+        case "recurring_watch": "Expected / recurring"
         default: "Verify"
         }
     }

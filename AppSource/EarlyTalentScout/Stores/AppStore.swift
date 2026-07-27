@@ -213,7 +213,7 @@ final class AppStore {
         }
         let targets = profile.targetCompanies.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         for company in targets where !liveCompanies.contains(company.lowercased()) && !watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(company) == .orderedSame }) {
-            watchCompanies.append(WatchCompany(company: company, reason: "No suitable active early-talent program was confirmed during this check.", officialCareersURL: nil))
+            watchCompanies.append(WatchCompany(company: company, reason: "No credible sophomore-accessible early-talent pathway was identified during this check.", officialCareersURL: nil))
         }
         persistApplications()
     }

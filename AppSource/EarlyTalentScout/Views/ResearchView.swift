@@ -13,7 +13,7 @@ struct ResearchView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Your opportunity list").font(.title2.weight(.semibold))
-                        Text("Official program links, target-company results, and high-fit interest matches. Nothing enters your tracker until you choose it.")
+                        Text("Official program links for open roles and credible next-cycle programs. Nothing enters your tracker until you choose it.")
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -46,7 +46,7 @@ struct ResearchView: View {
                 if !store.watchCompanies.isEmpty {
                     VStack(alignment: .leading, spacing: 9) {
                         Text("Watch list").font(.title3.weight(.semibold))
-                        Text("These companies did not have a suitable confirmed opening in the latest check. Internd checks them again on your next app launch and moves a match into this list when one appears.")
+                        Text("Internd could not identify a credible early-talent pathway for these companies in the latest check. It checks them again on your next app launch and moves a match into Research when one appears.")
                             .foregroundStyle(.secondary)
                         ForEach(store.watchCompanies) { watch in
                             HStack(alignment: .top, spacing: 10) {

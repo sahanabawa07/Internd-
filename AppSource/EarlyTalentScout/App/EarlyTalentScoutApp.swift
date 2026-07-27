@@ -1,7 +1,9 @@
 import SwiftUI
+import AppKit
 
 @main
 struct EarlyTalentScoutApp: App {
+    @NSApplicationDelegateAdaptor(InterndAppDelegate.self) private var appDelegate
     @State private var store = AppStore()
 
     var body: some Scene {
@@ -21,6 +23,15 @@ struct EarlyTalentScoutApp: App {
 
         Settings {
             SettingsView(store: store)
+        }
+    }
+}
+
+final class InterndAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 }

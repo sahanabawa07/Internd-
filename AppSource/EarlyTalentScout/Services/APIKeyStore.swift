@@ -2,12 +2,11 @@ import Foundation
 import Security
 
 enum APIKeyStore {
-    private static let service = "com.example.Internd"
-    private static let legacyService = "com.example.EarlyTalentScout"
+    private static let service = "com.example.EarlyTalentScout"
     private static let account = "openai-api-key"
 
     static func read() -> String? {
-        read(service: service) ?? read(service: legacyService)
+        read(service: service)
     }
 
     static func save(_ key: String) throws {

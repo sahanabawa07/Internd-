@@ -143,6 +143,8 @@ actor AgentOrchestrator {
         var title: String?
         var why: String?
         var nextStep: String?
+    }
+
     private struct LooseCareerDirection: Decodable {
         var title: String?
         var why: String?

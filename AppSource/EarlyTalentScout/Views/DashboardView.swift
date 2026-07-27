@@ -22,7 +22,7 @@ struct DashboardView: View {
                     if store.autoRefreshOnLaunch { Label("Auto-refresh on", systemImage: "arrow.clockwise").font(.caption).foregroundStyle(.secondary) }
                 }
 
-                if let run = store.run {
+                if store.run != nil {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Refreshing your opportunities and Watch List").font(.headline)
                         Text("This launch refresh uses your OpenAI API credit. You can turn it off in Settings anytime.").font(.caption).foregroundStyle(.secondary)

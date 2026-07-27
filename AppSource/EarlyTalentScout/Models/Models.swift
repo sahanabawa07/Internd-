@@ -33,7 +33,7 @@ enum WorkspaceSection: String, CaseIterable, Identifiable {
     }
 }
 
-struct StudentProfile: Codable {
+struct StudentProfile: Codable, Equatable {
     var resumeText = ""
     var schoolYear = "First year"
     var graduation = ""

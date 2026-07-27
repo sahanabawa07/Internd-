@@ -9,6 +9,8 @@ final class AppStore {
     var networkContacts: [NetworkContact] = []
     var applications: [ApplicationRecord]
     var relationships: [RelationshipRecord]
+    var watchCompanies: [WatchCompany]
+    var dismissedOpportunityIDs: Set<String>
     var tailoredResume: TailoredResume?
     var outreachDrafts: [OutreachDraft] = []
     var outreachTemplate = "Hi {first_name}, I noticed we share {shared_context}. I’m exploring {career_interest} and would appreciate 15 minutes to hear about your experience at {company}. Thank you!"
@@ -19,13 +21,18 @@ final class AppStore {
     var run: ResearchRun?
     var errorMessage: String?
     var apiKey = APIKeyStore.read() ?? ""
+    var hasRefreshedThisLaunch = false
+    var autoRefreshOnLaunch = UserDefaults.standard.object(forKey: "internd.autoRefreshOnLaunch") as? Bool ?? true
 
     let agentNames = ["Resume Analyst", "Career Strategist", "Program Researcher", "Link Verifier", "Opportunity Ranker"]
 
     init() {
         let workspace = TrackerPersistence.load()
+        profile = workspace.profile
         applications = workspace.applications
         relationships = workspace.relationships
+        watchCompanies = workspace.watchCompanies
+        dismissedOpportunityIDs = Set(workspace.dismissedOpportunityIDs)
     }
 
     var canResearch: Bool { profile.isReady && !apiKey.isEmpty && run == nil }
@@ -39,8 +46,20 @@ final class AppStore {
 
     func saveAPIKey() throws { try APIKeyStore.save(apiKey) }
 
-    func runResearch() async {
+    func setAutoRefreshOnLaunch(_ enabled: Bool) {
+        autoRefreshOnLaunch = enabled
+        UserDefaults.standard.set(enabled, forKey: "internd.autoRefreshOnLaunch")
+    }
+
+    func refreshForNewLaunchIfPossible() async {
+        guard autoRefreshOnLaunch, !hasRefreshedThisLaunch, canResearch else { return }
+        hasRefreshedThisLaunch = true
+        await runResearch(openResearchWhenFinished: false)
+    }
+
+    func runResearch(openResearchWhenFinished: Bool = true) async {
         guard canResearch else { return }
+        persistApplications()
         run = ResearchRun(agents: agentNames.map { AgentProgress(name: $0, status: .waiting) })
         errorMessage = nil
         defer { run = nil }
@@ -49,7 +68,8 @@ final class AppStore {
             report = try await orchestrator.run(profile: profile) { [weak self] name, status in
                 await MainActor.run { self?.updateAgent(name: name, status: status) }
             }
-            selection = .research
+            updateWatchList(with: report)
+            if openResearchWhenFinished { selection = .research }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -113,17 +133,71 @@ final class AppStore {
 
     func track(_ opportunity: Opportunity) {
         guard !applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }) else { return }
-        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL))
+        let contacts = suggestedContacts(for: opportunity.company).map(\.id)
+        applications.append(ApplicationRecord(company: opportunity.company, program: opportunity.program, postingDate: opportunity.postingDate ?? "", deadline: opportunity.deadline ?? "", requirements: opportunity.eligibility, applicationURL: opportunity.applicationURL ?? opportunity.officialProgramURL, description: opportunity.sourceNotes, whyThisMatches: opportunity.fitReason, lastChecked: .now, suggestedContactIDs: contacts))
         persistApplications()
     }
 
-    func persistApplications() { TrackerPersistence.save(applications: applications, relationships: relationships) }
+    func dismiss(_ opportunity: Opportunity) {
+        dismissedOpportunityIDs.insert(opportunity.id)
+        persistApplications()
+    }
+
+    func restoreDismissedResearch() {
+        dismissedOpportunityIDs.removeAll()
+        persistApplications()
+    }
+
+    func suggestedContacts(for company: String) -> [NetworkContact] {
+        let exact = networkContacts.filter { $0.company.localizedCaseInsensitiveCompare(company) == .orderedSame }
+        let related = networkContacts.filter { contact in
+            let context = "\(contact.company) \(contact.headline) \(contact.sharedContext)".lowercased()
+            return !exact.contains(contact) && (context.contains(company.lowercased()) || profile.targetCompanies.lowercased().contains(contact.company.lowercased()))
+        }
+        return Array((exact + related).prefix(3))
+    }
+
+    func setManualProgress(for id: UUID, keyPath: WritableKeyPath<ApplicationRecord, Bool>, to value: Bool) {
+        guard let index = applications.firstIndex(where: { $0.id == id }) else { return }
+        applications[index][keyPath: keyPath] = value
+        updateStage(for: index)
+        persistApplications()
+    }
+
+    func updateStage(for index: Int) {
+        guard applications.indices.contains(index) else { return }
+        let app = applications[index]
+        if app.status == "Submitted" || app.status == "Interviewing" || app.status == "Closed" { return }
+        let completed = app.preparationProgress
+        applications[index].status = completed == 0 ? "Saved" : completed == 1 ? "Researching" : completed == 2 ? "Resume tailored" : completed == 3 ? "Materials checked" : "Ready to submit"
+    }
+
+    private func updateWatchList(with newReport: ResearchReport) {
+        let liveCompanies = Set(newReport.opportunities.map { $0.company.lowercased() })
+        watchCompanies.removeAll { liveCompanies.contains($0.company.lowercased()) }
+        for watch in newReport.watchCompanies where !liveCompanies.contains(watch.company.lowercased()) {
+            if let index = watchCompanies.firstIndex(where: { $0.company.caseInsensitiveCompare(watch.company) == .orderedSame }) {
+                watchCompanies[index] = watch
+            } else {
+                watchCompanies.append(watch)
+            }
+        }
+        let targets = profile.targetCompanies.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        for company in targets where !liveCompanies.contains(company.lowercased()) && !watchCompanies.contains(where: { $0.company.caseInsensitiveCompare(company) == .orderedSame }) {
+            watchCompanies.append(WatchCompany(company: company, reason: "No suitable active early-talent program was confirmed during this check.", officialCareersURL: nil))
+        }
+        persistApplications()
+    }
+
+    func persistApplications() { TrackerPersistence.save(profile: profile, applications: applications, relationships: relationships, watchCompanies: watchCompanies, dismissedOpportunityIDs: dismissedOpportunityIDs) }
 
     func deleteLocalData() {
         applications = []
         relationships = []
         networkContacts = []
         outreachDrafts = []
+        watchCompanies = []
+        dismissedOpportunityIDs = []
         TrackerPersistence.deleteAll()
     }
 }

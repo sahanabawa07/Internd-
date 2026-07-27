@@ -46,5 +46,6 @@ struct ProfileView: View {
         .scrollContentBackground(.hidden)
         .background(Color.clear)
         .padding()
+        .onDisappear { store.persistApplications() }
     }
 }

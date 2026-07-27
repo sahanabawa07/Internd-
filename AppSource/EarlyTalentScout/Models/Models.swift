@@ -85,9 +85,26 @@ struct Opportunity: Codable, Identifiable, Hashable {
 struct ResearchReport: Codable {
     let careerSuggestions: [CareerDirection]
     let opportunities: [Opportunity]
+    let watchCompanies: [WatchCompany]
+    let skillSuggestions: [SkillSuggestion]
     let researchNotes: [String]
 
-    static let empty = ResearchReport(careerSuggestions: [], opportunities: [], researchNotes: [])
+    static let empty = ResearchReport(careerSuggestions: [], opportunities: [], watchCompanies: [], skillSuggestions: [], researchNotes: [])
+}
+
+struct WatchCompany: Codable, Identifiable, Hashable {
+    var id: String { company.lowercased() }
+    var company: String
+    var reason: String
+    var officialCareersURL: URL?
+    var lastChecked: Date = .now
+}
+
+struct SkillSuggestion: Codable, Identifiable, Hashable {
+    var id: String { title }
+    var title: String
+    var why: String
+    var nextStep: String
 }
 
 struct NetworkContact: Codable, Identifiable, Hashable {
@@ -104,13 +121,56 @@ struct ApplicationRecord: Codable, Identifiable, Hashable {
     var id = UUID()
     var company: String
     var program: String
-    var status: String = "Interested"
+    var status: String = "Saved"
     var postingDate: String = ""
     var deadline: String = ""
     var requirements: String = ""
     var applicationURL: URL?
     var outreachStatus: String = "Not started"
     var notes: String = ""
+    var description: String = ""
+    var whyThisMatches: String = ""
+    var lastChecked: Date = .now
+    var suggestedContactIDs: [String] = []
+    var companyResearchDone = false
+    var resumeTailored = false
+    var outreachPrepared = false
+    var materialsChecked = false
+    var interviewPrepDone = false
+
+    enum CodingKeys: String, CodingKey {
+        case id, company, program, status, postingDate, deadline, requirements, applicationURL, outreachStatus, notes
+        case description, whyThisMatches, lastChecked, suggestedContactIDs, companyResearchDone, resumeTailored, outreachPrepared, materialsChecked, interviewPrepDone
+    }
+
+    init(id: UUID = UUID(), company: String, program: String, status: String = "Saved", postingDate: String = "", deadline: String = "", requirements: String = "", applicationURL: URL? = nil, outreachStatus: String = "Not started", notes: String = "", description: String = "", whyThisMatches: String = "", lastChecked: Date = .now, suggestedContactIDs: [String] = [], companyResearchDone: Bool = false, resumeTailored: Bool = false, outreachPrepared: Bool = false, materialsChecked: Bool = false, interviewPrepDone: Bool = false) {
+        self.id = id; self.company = company; self.program = program; self.status = status; self.postingDate = postingDate; self.deadline = deadline; self.requirements = requirements; self.applicationURL = applicationURL; self.outreachStatus = outreachStatus; self.notes = notes; self.description = description; self.whyThisMatches = whyThisMatches; self.lastChecked = lastChecked; self.suggestedContactIDs = suggestedContactIDs; self.companyResearchDone = companyResearchDone; self.resumeTailored = resumeTailored; self.outreachPrepared = outreachPrepared; self.materialsChecked = materialsChecked; self.interviewPrepDone = interviewPrepDone
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        company = try c.decodeIfPresent(String.self, forKey: .company) ?? ""
+        program = try c.decodeIfPresent(String.self, forKey: .program) ?? ""
+        status = try c.decodeIfPresent(String.self, forKey: .status) ?? "Saved"
+        postingDate = try c.decodeIfPresent(String.self, forKey: .postingDate) ?? ""
+        deadline = try c.decodeIfPresent(String.self, forKey: .deadline) ?? ""
+        requirements = try c.decodeIfPresent(String.self, forKey: .requirements) ?? ""
+        applicationURL = try c.decodeIfPresent(URL.self, forKey: .applicationURL)
+        outreachStatus = try c.decodeIfPresent(String.self, forKey: .outreachStatus) ?? "Not started"
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
+        whyThisMatches = try c.decodeIfPresent(String.self, forKey: .whyThisMatches) ?? ""
+        lastChecked = try c.decodeIfPresent(Date.self, forKey: .lastChecked) ?? .now
+        suggestedContactIDs = try c.decodeIfPresent([String].self, forKey: .suggestedContactIDs) ?? []
+        companyResearchDone = try c.decodeIfPresent(Bool.self, forKey: .companyResearchDone) ?? false
+        resumeTailored = try c.decodeIfPresent(Bool.self, forKey: .resumeTailored) ?? false
+        outreachPrepared = try c.decodeIfPresent(Bool.self, forKey: .outreachPrepared) ?? false
+        materialsChecked = try c.decodeIfPresent(Bool.self, forKey: .materialsChecked) ?? false
+        interviewPrepDone = try c.decodeIfPresent(Bool.self, forKey: .interviewPrepDone) ?? false
+    }
+
+    var preparationProgress: Int { [companyResearchDone, resumeTailored, outreachPrepared, materialsChecked].filter { $0 }.count }
 }
 
 struct TailoredResume: Codable {

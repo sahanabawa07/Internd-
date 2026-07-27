@@ -3,107 +3,120 @@ import SwiftUI
 struct DashboardView: View {
     let store: AppStore
 
-    private var submitted: Int { store.applications.filter { $0.status.localizedCaseInsensitiveContains("submitted") }.count }
-    private var interviews: Int { store.applications.filter { $0.status.localizedCaseInsensitiveContains("interview") }.count }
-    private var nextDeadline: ApplicationRecord? {
-        store.applications.first { !$0.deadline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var priorityApps: [ApplicationRecord] {
+        store.applications.sorted { priorityScore($0) > priorityScore($1) }
     }
+
+    private var taskApps: [ApplicationRecord] { Array(priorityApps.prefix(4)) }
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Your next best move").font(.headline)
-                    Text(nextMove).font(.title3)
-                    Text(nextMoveDetail).foregroundStyle(.secondary)
-                    Button(nextButtonTitle) { store.selection = nextSection }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Today").font(.largeTitle.weight(.semibold))
+                        Text("Your plan is ordered by deadlines, strongest matches, and applications with the most work remaining.")
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if store.autoRefreshOnLaunch { Label("Auto-refresh on", systemImage: "arrow.clockwise").font(.caption).foregroundStyle(.secondary) }
                 }
-                .padding(.vertical, 8)
-            }
 
-            Section("Progress") {
-                HStack(spacing: 28) {
-                    Metric(value: store.applications.count, label: "Tracked")
-                    Metric(value: submitted, label: "Submitted")
-                    Metric(value: interviews, label: "Interviews")
-                    Metric(value: store.relationships.count, label: "Connections")
+                if let run = store.run {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Refreshing your opportunities and Watch List").font(.headline)
+                        Text("This launch refresh uses your OpenAI API credit. You can turn it off in Settings anytime.").font(.caption).foregroundStyle(.secondary)
+                    }.padding(15).background(.white.opacity(0.64), in: RoundedRectangle(cornerRadius: 18))
                 }
-                .padding(.vertical, 6)
-            }
 
-            Section("Next actions") {
-                if let deadline = nextDeadline {
-                    ActionRow(icon: "calendar", title: "Review \(deadline.company) deadline", detail: deadline.deadline) { store.selection = .tracker }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Next actions").font(.title3.weight(.semibold))
+                    if taskApps.isEmpty {
+                        TodayAction(icon: "sparkle.magnifyingglass", title: store.report.opportunities.isEmpty ? "Set up your profile, then let Internd research" : "Choose a program to add to your tracker", detail: store.report.opportunities.isEmpty ? "Add your interests, targets, and API key. Results refresh when you open Internd." : "Your official links are waiting in Research.", action: { store.selection = store.report.opportunities.isEmpty ? .profile : .research })
+                    } else {
+                        ForEach(taskApps) { app in
+                            TodayAction(icon: taskIcon(for: app), title: nextTask(for: app), detail: detail(for: app), action: { store.selection = .tracker })
+                        }
+                    }
                 }
-                if !store.relationships.isEmpty {
-                    ActionRow(icon: "person.2", title: "Review networking follow-ups", detail: "\(store.relationships.count) saved relationship\(store.relationships.count == 1 ? "" : "s")") { store.selection = .network }
-                }
-                if store.report.opportunities.isEmpty {
-                    ActionRow(icon: "sparkle.magnifyingglass", title: "Run your first opportunity search", detail: "Find early-talent programs that match you") { store.selection = .profile }
-                }
-                if store.applications.isEmpty && !store.report.opportunities.isEmpty {
-                    ActionRow(icon: "plus.circle", title: "Track a promising program", detail: "Save programs from Research into your tracker") { store.selection = .research }
-                }
-                if store.applications.isEmpty && store.report.opportunities.isEmpty && store.relationships.isEmpty {
-                    Text("Start with your profile, then research opportunities and build your outreach list.").foregroundStyle(.secondary)
-                }
-            }
 
-            Section("Quick start") {
-                HStack {
-                    Button("Update profile") { store.selection = .profile }
-                    Button("Research programs") { store.selection = .research }
-                    Button("Tailor resume") { store.selection = .tailor }
-                    Button("Interview prep") { store.selection = .interview }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Skill building for this week").font(.title3.weight(.semibold))
+                    let skills = Array(store.report.skillSuggestions.prefix(2))
+                    if skills.isEmpty {
+                        TodayAction(icon: "target", title: fallbackSkillTitle, detail: "Create a plan in Skills Plan after your next research refresh.", action: { store.selection = .skills })
+                    } else {
+                        ForEach(skills) { skill in
+                            TodayAction(icon: "target", title: skill.title, detail: "\(skill.why) Next: \(skill.nextStep)", action: { store.selection = .skills })
+                        }
+                    }
                 }
-            }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("At a glance").font(.title3.weight(.semibold))
+                    HStack(spacing: 12) {
+                        StatCard(value: "\(store.applications.count)", label: "Tracked")
+                        StatCard(value: "\(store.watchCompanies.count)", label: "Watching")
+                        StatCard(value: "\(store.applications.filter { $0.status == "Submitted" }.count)", label: "Submitted")
+                        StatCard(value: "\(store.relationships.count)", label: "Outreach")
+                    }
+                }
+            }.padding(22)
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
     }
 
-    private var nextMove: String {
-        if store.profile.resumeText.isEmpty && store.profile.careerInterests.isEmpty { return "Complete your profile" }
-        if store.report.opportunities.isEmpty { return "Research early-talent programs" }
-        if store.applications.isEmpty { return "Add your first application to the tracker" }
-        if let deadline = nextDeadline { return "Check \(deadline.company) before \(deadline.deadline)" }
-        return "Keep your application momentum moving" 
+    private func priorityScore(_ app: ApplicationRecord) -> Int {
+        let days = daysUntil(app.deadline)
+        let deadlineScore = days.map { max(0, 40 - min($0, 40)) } ?? 3
+        let effort = max(0, 4 - app.preparationProgress) * 12 + min(app.requirements.count / 12, 10)
+        let fit = app.whyThisMatches.isEmpty ? 0 : 8
+        return deadlineScore + effort + fit
     }
 
-    private var nextMoveDetail: String {
-        if store.profile.resumeText.isEmpty && store.profile.careerInterests.isEmpty { return "Add your resume or career interests so recommendations fit you." }
-        if store.report.opportunities.isEmpty { return "Let the research team find official program pages and application links." }
-        if store.applications.isEmpty { return "Tracking dates, requirements, and outreach keeps the search organized." }
-        return "Use the tracker and networking CRM to decide what deserves attention today." }
-
-    private var nextButtonTitle: String {
-        if store.profile.resumeText.isEmpty && store.profile.careerInterests.isEmpty { return "Open profile" }
-        if store.report.opportunities.isEmpty { return "Start research" }
-        return "Open tracker" }
-
-    private var nextSection: WorkspaceSection {
-        if store.profile.resumeText.isEmpty && store.profile.careerInterests.isEmpty { return .profile }
-        if store.report.opportunities.isEmpty { return .profile }
-        return .tracker
+    private func daysUntil(_ text: String) -> Int? {
+        let formats = ["MMM d, yyyy", "MMMM d, yyyy", "M/d/yyyy", "yyyy-MM-dd"]
+        for format in formats {
+            let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.dateFormat = format
+            if let date = formatter.date(from: text) { return Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: .now), to: date).day }
+        }
+        return nil
     }
+
+    private func nextTask(for app: ApplicationRecord) -> String {
+        if !app.companyResearchDone { return "Research \(app.company)" }
+        if !app.resumeTailored { return "Tailor your resume for \(app.company)" }
+        if !app.outreachPrepared { return "Plan outreach for \(app.company)" }
+        if !app.materialsChecked { return "Complete the application check for \(app.company)" }
+        return "Submit \(app.company) application"
+    }
+
+    private func detail(for app: ApplicationRecord) -> String {
+        var pieces: [String] = []
+        if !app.deadline.isEmpty { pieces.append("Deadline: \(app.deadline)") }
+        pieces.append("\(4 - app.preparationProgress) core steps left")
+        if !app.requirements.isEmpty { pieces.append("Requirements saved") }
+        return pieces.joined(separator: " · ")
+    }
+
+    private func taskIcon(for app: ApplicationRecord) -> String { app.deadline.isEmpty ? "checklist" : "calendar" }
+    private var fallbackSkillTitle: String { profileInterest.lowercased().contains("consult") ? "Practice one consulting case" : "Choose one skill to build from your target roles" }
+    private var profileInterest: String { store.profile.careerInterests }
 }
 
-private struct Metric: View {
-    let value: Int
-    let label: String
-    var body: some View { VStack(alignment: .leading, spacing: 2) { Text("\(value)").font(.title2.weight(.semibold)); Text(label).foregroundStyle(.secondary) } }
-}
-
-private struct ActionRow: View {
-    let icon: String
-    let title: String
-    let detail: String
-    let action: () -> Void
+private struct TodayAction: View {
+    let icon: String; let title: String; let detail: String; let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack { Image(systemName: icon).frame(width: 20); VStack(alignment: .leading) { Text(title); Text(detail).font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: "chevron.right").foregroundStyle(.tertiary) }
-        }
-        .buttonStyle(.plain)
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon).font(.title3).frame(width: 34, height: 34).background(InterndPalette.pink.opacity(0.45), in: Circle())
+                VStack(alignment: .leading, spacing: 3) { Text(title).foregroundStyle(.primary); Text(detail).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading) }
+                Spacer(); Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }.padding(13).background(.white.opacity(0.62), in: RoundedRectangle(cornerRadius: 17))
+        }.buttonStyle(.plain)
     }
+}
+
+private struct StatCard: View {
+    let value: String; let label: String
+    var body: some View { VStack(alignment: .leading, spacing: 2) { Text(value).font(.title2.weight(.semibold)); Text(label).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 15)) }
 }

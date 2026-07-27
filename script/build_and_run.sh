@@ -51,7 +51,7 @@ PLIST
 # Force Finder/Dock to drop their cached icon for this bundle
 touch "$APP_BUNDLE"
 
-open_app() { /usr/bin/open -n "$APP_BUNDLE"; }
+open_app() { /usr/bin/open "$APP_BUNDLE"; }
 case "$MODE" in
   run) open_app ;;
   --debug|debug) lldb -- "$APP_BINARY" ;;
@@ -60,4 +60,3 @@ case "$MODE" in
   --verify|verify) open_app; sleep 1; pgrep -x "$APP_NAME" >/dev/null ;;
   *) echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2; exit 2 ;;
 esac
-

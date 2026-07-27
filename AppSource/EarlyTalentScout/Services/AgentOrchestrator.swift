@@ -45,20 +45,23 @@ actor AgentOrchestrator {
     private func researchPrompt(profile: StudentProfile, context: String) -> String {
         """
         You are the Program Researcher agent. Current date: \(Date.now.formatted(date: .abbreviated, time: .omitted)).
-        Research 6–8 internships, early-talent programs, fellowships, exploration programs, and pre-internships.
+        Research 10–12 internships, early-talent programs, fellowships, exploration programs, and pre-internships.
+        Include target-company programs first. If a target has no open role, preserve its official recurring program or university-careers page and mark it recurring_watch instead of dropping it.
+        Then add strong programs from other companies that match the student's stated career interests.
         Prioritize first- and second-year student eligibility. Targets: \(profile.targetCompanies). Locations: \(profile.locations).
         Work authorization constraints: \(profile.workAuthorization). Student context: \(context).
         Search official employer career and program sites first. LinkedIn may be a supporting source only; never the only source.
         Return JSON only, using snake_case keys for candidate program objects with company, program, career_area,
         fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes.
-        Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return no more than eight candidates.
+        Also return a watch_companies array for 5–10 relevant companies that do not currently have a suitable open program; each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. Use source_notes to state whether a result is a target-company or interest match.
         """
     }
 
     private func verificationPrompt(candidateJSON: String) -> String {
         """
         You are the Link Verifier agent. Check each candidate below using web search. Keep only programs with an official
-        employer, university, or program URL. An application URL must be employer-owned. Mark status open only if the
+        employer, university, or program URL. An application URL must be employer-owned. Preserve valid target-company results
+        even when no role is open: mark them recurring_watch and retain the official university-program or careers page. Mark status open only if the
         official source shows an active opening today; otherwise use recurring_watch or unknown. Never substitute a job-board
         link. Return corrected candidate JSON only.\n\nCandidates:\n\(candidateJSON)
         """
@@ -68,7 +71,7 @@ actor AgentOrchestrator {
         """
         You are the Opportunity Ranker agent. Rank the verified opportunities for this student, favoring first/second-year fit,
         stated interests, location constraints, and evidence from the resume. Return JSON only in this exact shape:
-        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":""}],"research_notes":[""]}
+        {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":""}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
         Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified input:\n\(verifiedJSON)
         """
     }
@@ -84,7 +87,8 @@ actor AgentOrchestrator {
             )
         }
         let opportunities = (loose.opportunities ?? []).compactMap { item -> Opportunity? in
-            guard let officialText = item.officialProgramURL,
+            let officialText = item.officialProgramURL ?? item.applicationURL
+            guard let officialText,
                   let officialURL = URL(string: officialText),
                   !officialText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
             let status = ["open", "recurring_watch", "unknown"].contains(item.status ?? "") ? item.status! : "unknown"
@@ -104,9 +108,19 @@ actor AgentOrchestrator {
                 sourceNotes: item.sourceNotes ?? "Official program page supplied by the research agent."
             )
         }
+        let watched = (loose.watchCompanies ?? []).compactMap { item -> WatchCompany? in
+            guard let company = item.company?.trimmingCharacters(in: .whitespacesAndNewlines), !company.isEmpty else { return nil }
+            return WatchCompany(company: company, reason: item.reason ?? "No suitable early-talent role was confirmed during the latest check.", officialCareersURL: item.officialCareersURL.flatMap(URL.init(string:)))
+        }
+        let skills = (loose.skillSuggestions ?? []).compactMap { item -> SkillSuggestion? in
+            guard let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else { return nil }
+            return SkillSuggestion(title: title, why: item.why ?? "This skill appears often in your strongest matches.", nextStep: item.nextStep ?? "Choose one small practice step this week.")
+        }
         return ResearchReport(
             careerSuggestions: directions,
             opportunities: opportunities,
+            watchCompanies: watched,
+            skillSuggestions: skills,
             researchNotes: loose.researchNotes ?? []
         )
     }
@@ -114,9 +128,21 @@ actor AgentOrchestrator {
     private struct LooseResearchReport: Decodable {
         var careerSuggestions: [LooseCareerDirection]?
         var opportunities: [LooseOpportunity]?
+        var watchCompanies: [LooseWatchCompany]?
+        var skillSuggestions: [LooseSkillSuggestion]?
         var researchNotes: [String]?
     }
 
+    private struct LooseWatchCompany: Decodable {
+        var company: String?
+        var reason: String?
+        var officialCareersURL: String?
+    }
+
+    private struct LooseSkillSuggestion: Decodable {
+        var title: String?
+        var why: String?
+        var nextStep: String?
     private struct LooseCareerDirection: Decodable {
         var title: String?
         var why: String?

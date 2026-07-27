@@ -12,7 +12,10 @@ struct ContentView: View {
             if hasStarted {
                 workspace
             } else {
-                WelcomeView { hasStarted = true }
+                WelcomeView {
+                    hasStarted = true
+                    Task { await store.refreshForNewLaunchIfPossible() }
+                }
             }
         }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.pdf, .plainText]) { result in

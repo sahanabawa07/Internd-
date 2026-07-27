@@ -24,13 +24,17 @@ actor AgentOrchestrator {
         )
 
         let context = "Resume analysis:\n\(try await profileAnalysis)\n\nCareer strategy:\n\(try await strategy)"
-        let researcher = try await ask(researchPrompt(profile: profile, context: context), web: true, name: "Program Researcher", progress: onProgress)
-        let verified = try await ask(verificationPrompt(candidateJSON: researcher), web: true, name: "Link Verifier", progress: onProgress)
-        let ranked = try await ask(rankingPrompt(profile: profile, verifiedJSON: verified), web: false, name: "Opportunity Ranker", progress: onProgress)
-        let rawReport = try? decodeReport(researcher)
+        async let researcher = ask(researchPrompt(profile: profile, context: context), web: true, name: "Program Researcher", progress: onProgress)
+        async let discovery = ask(discoveryPrompt(profile: profile, context: context), web: true, name: "Ecosystem Scout", progress: onProgress)
+        let rawPrograms = try await researcher
+        let discoveryResults = try await discovery
+        let verified = try await ask(verificationPrompt(candidateJSON: rawPrograms), web: true, name: "Link Verifier", progress: onProgress)
+        let ranked = try await ask(rankingPrompt(profile: profile, verifiedJSON: verified, discoveryJSON: discoveryResults), web: false, name: "Opportunity Ranker", progress: onProgress)
+        let rawReport = try? decodeReport(rawPrograms)
         let verifiedReport = try? decodeReport(verified)
+        let discoveryReport = try? decodeReport(discoveryResults)
         let rankedReport = try? decodeReport(ranked)
-        return strongestReport(ranked: rankedReport, verified: verifiedReport, raw: rawReport)
+        return strongestReport(ranked: rankedReport, verified: verifiedReport, raw: rawReport, discovery: discoveryReport)
     }
 
     private func ask(_ prompt: String, web: Bool, name: String, progress: @Sendable (String, AgentProgress.Status) async -> Void) async throws -> String {
@@ -48,40 +52,38 @@ actor AgentOrchestrator {
     private func researchPrompt(profile: StudentProfile, context: String) -> String {
         """
         You are the Program Researcher agent. Current date: \(Date.now.formatted(date: .abbreviated, time: .omitted)).
-        Research 10–12 internships, early-talent programs, fellowships, exploration programs, and pre-internships for the student's NEXT summer.
-        This is a planning search, not only a "what is open today" search. Include target-company programs first. Keep credible recurring, recently closed, or expected-next-cycle programs in the opportunities list if they have an official employer program, university recruiting, or careers page. Mark those recurring_watch, state the known or expected application timing in source_notes, and preserve the official URL.
-        Do not move a company to watch_companies merely because its program is not open today.
-        Build the discovery list from the student's interests, resume, career directions, and preferred locations first; the target-company list is only a secondary signal. Then add strong programs from other companies that match the student's stated career interests.
-        Independently identify 8–12 additional organizations, firms, programs, fellowships, or ecosystem pathways outside the student's target list that they are unlikely to have thought of. Favor credible sophomore-accessible programs, early-insight pathways, or standard internships that credibly accept sophomores. Do not limit this list to large employers.
-        Map adjacent paths deliberately when relevant: VC and private-equity firms or pipelines; banks and quant/trading firms; economic consulting and economic-advisory firms; government, multilateral, UN, and public-interest organizations; startup accelerators and startup ecosystems (for example Y Combinator-style organizations); and access programs such as Girls Who Invest, SEO, INROADS, or MLT. If the student lists cities such as New York City or Chicago, actively look for organizations and programs in those cities. Recommend only categories that genuinely connect to the student's interests and explain the connection.
-        Prioritize first- and second-year student eligibility. Targets: \(profile.targetCompanies). Locations: \(profile.locations).
-        Work authorization constraints: \(profile.workAuthorization). Student context: \(context).
-        Search official employer career and program sites first. LinkedIn may be a supporting source only; never the only source.
-        Also identify networking_leads: organizations that fit the student but do not normally offer a clear formal internship pathway, where informational outreach could uncover project work, a small team need, or a future connection. Do not claim that an unofficial internship exists. Use this only for credible networking-first leads, not for ordinary employers with formal internships.
-        Return JSON only in this outer shape: {"opportunities":[...],"suggested_companies":[...],"networking_leads":[...],"watch_companies":[...]}. Use snake_case keys for each candidate program object:
-        company, program, career_area, fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linkedin_url, source_notes, expected_application_timing, preparation_checklist, resume_focus, skill_focus, official_source_type, verified_facts.
-        For every opportunity include official_source_type and verified_facts, where every item has label, value, classification (confirmed|historical|guidance), and source_url. Facts labeled confirmed must be stated on the linked official source. Historical facts must be from a prior/recurring official program page. Guidance must be clearly preparation advice, not a claim about the program. Never supply a deadline, eligibility, requirement, or opening status unless it appears as a matching verified_fact with an official source URL. For every recurring or future program, provide an honest pre-application plan: expected_application_timing, preparation_checklist (2–4 actions), resume_focus (2–4 truthful themes/keywords), and skill_focus (1–3 skills to build). Clearly distinguish confirmed current requirements from historical, recurring, or inferred preparation guidance in source_notes. Each suggested_companies item may name a company, firm, nonprofit, government body, program provider, or accelerator; it needs company, category, why_it_fits, early_talent_pathway, official_careers_url. Each networking_leads item needs organization, category, why_network, outreach_angle, official_url. Do not repeat a target company. Use a real official careers/program URL when available; otherwise leave it null rather than inventing it. Use watch_companies only for relevant companies where you could not identify any credible sophomore-accessible program or recurring early-talent pathway. Each item needs company, reason, and official_careers_url. Do not make up URLs, eligibility, deadlines, or open status. Keep every field concise and return 10–12 candidates whenever official pages exist. In source_notes, say whether it is a target-company or interest match and whether it is open now, closed, or expected to return.
+        Your only job is to return 10–12 concrete sophomore-accessible internships, exploration programs, fellowships, or pre-internships for the student's NEXT summer. Include target-company programs first, then high-fit programs outside the list. This is a planning search: keep a credible recurring program in the opportunity list even if it is not open today.
+        Prioritize first/second-year eligibility. Search official employer, university recruiting, or program sites. Use sources like Microsoft Explore, Google STEP, NVIDIA Ignite, Bain BEL/CREW, BCG Advance, Girls Who Invest, and early-insight programs as leads only when relevant and supported by an official page—do not invent facts.
+        Student: \(context). Targets: \(profile.targetCompanies). Interests: \(profile.careerInterests). Locations: \(profile.locations). Work authorization: \(profile.workAuthorization).
+        Return JSON only: {"opportunities":[...]}. Every opportunity needs company, program, career_area, fit_reason, eligibility, location, status, posting_date, deadline, application_url, official_program_url, linked_in_url, source_notes, expected_application_timing, preparation_checklist, resume_focus, skill_focus, official_source_type, verified_facts. Use empty/null values when unknown rather than dropping a credible official program.
+        """
+    }
+
+    private func discoveryPrompt(profile: StudentProfile, context: String) -> String {
+        """
+        You are the Ecosystem Scout agent. Find organizations, firms, access programs, fellowships, and networking-first leads the student may not already know. Start from interests, resume, and preferred locations—not their target-company list.
+        Cover relevant adjacent paths such as banking, quant/trading, VC/private equity, economic consulting/advisory, government/multilateral/UN/public interest, startup accelerators, and access programs such as Girls Who Invest, SEO, INROADS, or MLT. If locations include NYC or Chicago, actively seek relevant organizations there. Do not claim an internship exists when it does not.
+        Student: \(context). Interests: \(profile.careerInterests). Locations: \(profile.locations).
+        Return JSON only: {"suggested_companies":[{"company":"","category":"","why_it_fits":"","early_talent_pathway":"","official_careers_url":null}],"networking_leads":[{"organization":"","category":"","why_network":"","outreach_angle":"","official_url":null}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}]}. Return 8–12 suggested_companies and 3–6 networking_leads when credible sources exist.
         """
     }
 
     private func verificationPrompt(candidateJSON: String) -> String {
         """
-        You are the Link Verifier agent. Check each candidate below using web search. Keep only programs with an official
-        employer, university, or program URL. An application URL must be employer-owned. This is a NEXT-SUMMER planning search:
-        keep credible recurring or recently closed official programs in the candidate list even when no role is open today. Mark them recurring_watch,
-        retain the official program, university recruiting, or careers page, and describe the availability honestly in source_notes. Use status open only if the
-        official source shows an active opening today; otherwise use recurring_watch or unknown. Only remove a candidate when the program claim or official URL cannot be supported.
-        Rebuild verified_facts after checking the cited official pages. Remove any fact not supported by an official URL. Mark current, page-supported claims confirmed; prior-cycle facts historical; and advice guidance. Do not leave an unverified deadline, eligibility, requirement, or availability claim elsewhere in a candidate. Preserve expected_application_timing, preparation_checklist, resume_focus, and skill_focus when they are reasonable; remove or soften any item not supported by the source and keep it clearly framed as preparation guidance rather than a confirmed requirement. For suggested_companies, keep only non-target employers, organizations, programs, or accelerators with a credible interest-based reason to explore and an official URL when one was supplied. For networking_leads, keep only credible organizations appropriate for informational outreach; never imply an unofficial internship exists. Never substitute a job-board link. Return the corrected JSON in the same outer shape {"opportunities":[...],"suggested_companies":[...],"networking_leads":[...],"watch_companies":[...]}; do not return prose.\n\nCandidates:\n\(candidateJSON)
+        You are the Link Verifier agent. Verify only the opportunity candidates below using web search. Keep a candidate only when its official employer, university recruiting, or program page supports that the program exists. An application URL must be employer-owned.
+        This is a NEXT-SUMMER planning search. Keep credible recurring or recently closed official programs even when no role is open today; label those recurring_watch and retain the official program or careers page. Use open only when an official source confirms an active opening today. Use unknown when availability is unclear. Remove a candidate only when its program claim or official URL cannot be supported.
+        Rebuild verified_facts from the official source. Label page-supported current facts confirmed, previous-cycle facts historical, and preparation advice guidance. Do not invent a deadline, eligibility rule, requirement, or availability claim. Never use a job-board URL as the official source.
+        Return JSON only in this exact shape: {"opportunities":[...]}. Do not return prose or any other categories.\n\nCandidates:\n\(candidateJSON)
         """
     }
 
-    private func rankingPrompt(profile: StudentProfile, verifiedJSON: String) -> String {
+    private func rankingPrompt(profile: StudentProfile, verifiedJSON: String, discoveryJSON: String) -> String {
         """
         You are the Opportunity Ranker agent. Rank the verified opportunities for this student, favoring first/second-year fit,
         stated interests, location constraints, and evidence from the resume. Rank suggested_companies by how much they expand the student's awareness beyond named targets while still fitting their interests; preserve a mix of direct employers and relevant programs/ecosystem pathways when justified. Preserve as many verified candidates as possible, including recurring next-cycle programs.
         Never move an opportunity into watch_companies merely because it is not currently open; watch_companies are only companies with no credible program pathway. Return JSON only in this exact shape:
         {"career_suggestions":[{"title":"","why":"","next_step":""}],"opportunities":[{"company":"","program":"","career_area":"","fit_reason":"","eligibility":"","location":"","status":"open|recurring_watch|unknown","posting_date":null,"deadline":null,"application_url":null,"official_program_url":"","linkedin_url":null,"source_notes":"","expected_application_timing":"","preparation_checklist":[""],"resume_focus":[""],"skill_focus":[""],"official_source_type":"","verified_facts":[{"label":"","value":"","classification":"confirmed|historical|guidance","source_url":""}]}],"suggested_companies":[{"company":"","category":"","why_it_fits":"","early_talent_pathway":"","official_careers_url":null}],"networking_leads":[{"organization":"","category":"","why_network":"","outreach_angle":"","official_url":null}],"watch_companies":[{"company":"","reason":"","official_careers_url":null}],"skill_suggestions":[{"title":"","why":"","next_step":""}],"research_notes":[""]}
-        Preserve verified_facts, their classifications, and their source URLs exactly as supplied by the verifier; do not add facts. Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified input:\n\(verifiedJSON)
+        Preserve verified_facts, their classifications, and their source URLs exactly as supplied by the verifier; do not add facts. Use every verified URL exactly as given; never invent a URL. Student: \(profile.careerInterests). Verified opportunity input:\n\(verifiedJSON)\n\nDiscovery input:\n\(discoveryJSON)
         """
     }
 
@@ -153,13 +155,14 @@ actor AgentOrchestrator {
         )
     }
 
-    private func strongestReport(ranked: ResearchReport?, verified: ResearchReport?, raw: ResearchReport?) -> ResearchReport {
+    private func strongestReport(ranked: ResearchReport?, verified: ResearchReport?, raw: ResearchReport?, discovery: ResearchReport?) -> ResearchReport {
         let fallback = verified ?? raw ?? ResearchReport.empty
+        let discoveryFallback = discovery ?? ResearchReport.empty
         let rankedReport = ranked ?? ResearchReport.empty
         let chosenOpportunities = !rankedReport.opportunities.isEmpty ? rankedReport.opportunities : fallback.opportunities
-        let chosenSuggestions = !rankedReport.suggestedCompanies.isEmpty ? rankedReport.suggestedCompanies : fallback.suggestedCompanies
-        let chosenNetworking = !rankedReport.networkingLeads.isEmpty ? rankedReport.networkingLeads : fallback.networkingLeads
-        let chosenWatch = !rankedReport.watchCompanies.isEmpty ? rankedReport.watchCompanies : fallback.watchCompanies
+        let chosenSuggestions = !rankedReport.suggestedCompanies.isEmpty ? rankedReport.suggestedCompanies : discoveryFallback.suggestedCompanies
+        let chosenNetworking = !rankedReport.networkingLeads.isEmpty ? rankedReport.networkingLeads : discoveryFallback.networkingLeads
+        let chosenWatch = !rankedReport.watchCompanies.isEmpty ? rankedReport.watchCompanies : discoveryFallback.watchCompanies
         let chosenSkills = !rankedReport.skillSuggestions.isEmpty ? rankedReport.skillSuggestions : fallback.skillSuggestions
         let chosenDirections = !rankedReport.careerSuggestions.isEmpty ? rankedReport.careerSuggestions : fallback.careerSuggestions
         let chosenNotes = !rankedReport.researchNotes.isEmpty ? rankedReport.researchNotes : fallback.researchNotes

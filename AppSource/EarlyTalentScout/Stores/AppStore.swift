@@ -31,7 +31,7 @@ final class AppStore {
     var profileRefreshQueued = false
     private var profileRevision = 0
 
-    let agentNames = ["Resume Analyst", "Career Strategist", "Program Researcher", "Link Verifier", "Opportunity Ranker"]
+    let agentNames = ["Resume Analyst", "Career Strategist", "Program Researcher", "Ecosystem Scout", "Link Verifier", "Opportunity Ranker"]
 
     init() {
         let workspace = TrackerPersistence.load()

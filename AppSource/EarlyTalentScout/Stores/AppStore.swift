@@ -28,6 +28,8 @@ final class AppStore {
     var apiKey = APIKeyStore.read() ?? ""
     var hasRefreshedThisLaunch = false
     var autoRefreshOnLaunch = UserDefaults.standard.object(forKey: "internd.autoRefreshOnLaunch") as? Bool ?? true
+    var profileRefreshQueued = false
+    private var profileRevision = 0
 
     let agentNames = ["Resume Analyst", "Career Strategist", "Program Researcher", "Link Verifier", "Opportunity Ranker"]
 
@@ -63,12 +65,33 @@ final class AppStore {
         await runResearch(openResearchWhenFinished: false)
     }
 
+    func profileDidChange() {
+        persistApplications()
+        profileRevision += 1
+        let revisionToRefresh = profileRevision
+        guard profile.isReady, !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        profileRefreshQueued = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1.2))
+            guard let self, self.profileRevision == revisionToRefresh, self.run == nil else { return }
+            self.profileRefreshQueued = false
+            await self.runResearch(openResearchWhenFinished: false)
+        }
+    }
+
     func runResearch(openResearchWhenFinished: Bool = true) async {
         guard canResearch else { return }
+        let researchRevision = profileRevision
         persistApplications()
         run = ResearchRun(agents: agentNames.map { AgentProgress(name: $0, status: .waiting) })
         errorMessage = nil
-        defer { run = nil }
+        defer {
+            run = nil
+            if profileRevision != researchRevision {
+                profileRefreshQueued = false
+                Task { @MainActor [weak self] in await self?.runResearch(openResearchWhenFinished: false) }
+            }
+        }
         let orchestrator = AgentOrchestrator(apiKey: apiKey)
         do {
             report = try await orchestrator.run(profile: profile) { [weak self] name, status in

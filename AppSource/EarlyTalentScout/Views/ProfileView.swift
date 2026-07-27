@@ -38,6 +38,10 @@ struct ProfileView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                if store.profileRefreshQueued {
+                    Label("Profile updated — refreshing recommendations after you finish editing.", systemImage: "arrow.clockwise")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             } footer: {
                 Text("Five focused agents analyze, research, verify, and rank results. Target companies, interests, or a resume are enough to begin. Your API key is stored in macOS Keychain.")
             }
@@ -46,7 +50,7 @@ struct ProfileView: View {
         .scrollContentBackground(.hidden)
         .background(Color.clear)
         .padding()
-        .onChange(of: store.profile) { _, _ in store.persistApplications() }
+        .onChange(of: store.profile) { _, _ in store.profileDidChange() }
         .onDisappear { store.persistApplications() }
     }
 }

@@ -21,6 +21,11 @@ struct ResearchView: View {
                         .disabled(!store.canResearch)
                 }
 
+                if store.profileRefreshQueued {
+                    Label("Your profile changed. Internd is preparing a fresh recommendation set.", systemImage: "arrow.clockwise")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+
                 if let run = store.run {
                     ResearchProgressCard(run: run)
                 } else if visibleOpportunities.isEmpty {

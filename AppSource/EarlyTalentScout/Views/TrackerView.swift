@@ -3,6 +3,7 @@ import SwiftUI
 struct TrackerView: View {
     let store: AppStore
     @State private var exporting = false
+    @State private var selectedApplicationID: UUID?
 
     var body: some View {
         @Bindable var store = store
@@ -19,9 +20,16 @@ struct TrackerView: View {
 
                 if store.applications.isEmpty {
                     ContentUnavailableView("Nothing is in your tracker yet", systemImage: "checklist", description: Text("Choose Add to tracker on a research result to keep its official link and details here."))
-                }
-                ForEach(store.applications.indices, id: \.self) { index in
-                    ApplicationCard(store: store, application: $store.applications[index])
+                } else {
+                    Text("Click a row to open its full details, requirements, sources, preparation checklist, and outreach plan.")
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
+                    applicationTable
+                    if let selectedIndex = store.applications.firstIndex(where: { $0.id == selectedApplicationID }) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Application details").font(.system(size: 25, weight: .semibold))
+                            ApplicationCard(store: store, application: $store.applications[selectedIndex])
+                        }
+                    }
                 }
                 Button("Add application manually", systemImage: "plus") {
                     store.applications.append(ApplicationRecord(company: "", program: ""))
@@ -31,6 +39,75 @@ struct TrackerView: View {
         }
         .fileExporter(isPresented: $exporting, document: ApplicationCSVDocument(csv: CSVSupport.applicationSpreadsheet(store.applications)), contentType: .commaSeparatedText, defaultFilename: "internd-application-tracker") { _ in }
         .onChange(of: store.applications) { _, _ in store.persistApplications() }
+        .onAppear { if selectedApplicationID == nil { selectedApplicationID = store.applications.first?.id } }
+    }
+
+    private var applicationTable: some View {
+        ScrollView(.horizontal) {
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
+                GridRow {
+                    tableHeader("Company", width: 150)
+                    tableHeader("Program", width: 210)
+                    tableHeader("Stage", width: 160)
+                    tableHeader("Posted", width: 115)
+                    tableHeader("Deadline", width: 125)
+                    tableHeader("Requirements", width: 230)
+                    tableHeader("Contacts", width: 110)
+                    tableHeader("Prep", width: 80)
+                    tableHeader("Link", width: 100)
+                }
+                Divider().gridCellColumns(9)
+                ForEach(store.applications.indices, id: \.self) { index in
+                    ApplicationTableRow(store: store, application: Binding(get: { store.applications[index] }, set: { store.applications[index] = $0 }), isSelected: selectedApplicationID == store.applications[index].id) {
+                        selectedApplicationID = store.applications[index].id
+                    }
+                    Divider().gridCellColumns(9)
+                }
+            }
+            .padding(14)
+            .background(.white.opacity(0.64), in: RoundedRectangle(cornerRadius: 19))
+        }
+    }
+
+    private func tableHeader(_ title: String, width: CGFloat) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(InterndPalette.ink.opacity(0.72))
+            .frame(width: width, alignment: .leading)
+    }
+}
+
+private struct ApplicationTableRow: View {
+    let store: AppStore
+    @Binding var application: ApplicationRecord
+    let isSelected: Bool
+    let select: () -> Void
+    private let stages = ["Saved", "Researching", "Resume tailored", "Network outreach", "Materials checked", "Ready to submit", "Submitted", "Interviewing", "Closed"]
+
+    var body: some View {
+        GridRow {
+            TextField("Company", text: $application.company).frame(width: 150, alignment: .leading)
+            TextField("Program", text: $application.program).frame(width: 210, alignment: .leading)
+            Picker("Stage", selection: $application.status) { ForEach(stages, id: \.self) { Text($0).tag($0) } }
+                .labelsHidden().frame(width: 160, alignment: .leading)
+            TextField("Posted", text: $application.postingDate).frame(width: 115, alignment: .leading)
+            TextField("Deadline", text: $application.deadline).frame(width: 125, alignment: .leading)
+            Text(application.requirements.isEmpty ? "—" : application.requirements)
+                .font(.system(size: 15)).lineLimit(2).frame(width: 230, alignment: .leading)
+            Text("\(store.suggestedContacts(for: application.company).count) people")
+                .font(.system(size: 15)).frame(width: 110, alignment: .leading)
+            Text("\(application.preparationProgress)/4")
+                .font(.system(size: 15, weight: .medium)).frame(width: 80, alignment: .leading)
+            Group {
+                if let url = application.applicationURL { Link("Open", destination: url) }
+                else { Text("—").foregroundStyle(.secondary) }
+            }.frame(width: 100, alignment: .leading)
+        }
+        .padding(.vertical, 9)
+        .padding(.horizontal, 5)
+        .background(isSelected ? InterndPalette.pink.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 9))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: select)
     }
 }
 

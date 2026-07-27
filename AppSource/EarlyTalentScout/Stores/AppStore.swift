@@ -41,6 +41,7 @@ final class AppStore {
         networkingLeads = workspace.networkingLeads
         watchCompanies = workspace.watchCompanies
         dismissedOpportunityIDs = Set(workspace.dismissedOpportunityIDs)
+        report = workspace.report ?? ResearchReport.empty
     }
 
     var canResearch: Bool { profile.isReady && !apiKey.isEmpty && run == nil }
@@ -321,7 +322,7 @@ final class AppStore {
         persistApplications()
     }
 
-    func persistApplications() { TrackerPersistence.save(profile: profile, applications: applications, relationships: relationships, networkingLeads: networkingLeads, watchCompanies: watchCompanies, dismissedOpportunityIDs: dismissedOpportunityIDs) }
+    func persistApplications() { TrackerPersistence.save(profile: profile, applications: applications, relationships: relationships, networkingLeads: networkingLeads, watchCompanies: watchCompanies, dismissedOpportunityIDs: dismissedOpportunityIDs, report: report) }
 
     func deleteLocalData() {
         applications = []

@@ -15,17 +15,19 @@ enum TrackerPersistence {
         var networkingLeads: [NetworkingLead]
         var watchCompanies: [WatchCompany]
         var dismissedOpportunityIDs: [String]
+        var report: ResearchReport?
 
-        init(profile: StudentProfile = StudentProfile(), applications: [ApplicationRecord] = [], relationships: [RelationshipRecord] = [], networkingLeads: [NetworkingLead] = [], watchCompanies: [WatchCompany] = [], dismissedOpportunityIDs: [String] = []) {
+        init(profile: StudentProfile = StudentProfile(), applications: [ApplicationRecord] = [], relationships: [RelationshipRecord] = [], networkingLeads: [NetworkingLead] = [], watchCompanies: [WatchCompany] = [], dismissedOpportunityIDs: [String] = [], report: ResearchReport? = nil) {
             self.profile = profile
             self.applications = applications
             self.relationships = relationships
             self.networkingLeads = networkingLeads
             self.watchCompanies = watchCompanies
             self.dismissedOpportunityIDs = dismissedOpportunityIDs
+            self.report = report
         }
 
-        enum CodingKeys: String, CodingKey { case profile, applications, relationships, networkingLeads, watchCompanies, dismissedOpportunityIDs }
+        enum CodingKeys: String, CodingKey { case profile, applications, relationships, networkingLeads, watchCompanies, dismissedOpportunityIDs, report }
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             profile = try c.decodeIfPresent(StudentProfile.self, forKey: .profile) ?? StudentProfile()
@@ -34,6 +36,7 @@ enum TrackerPersistence {
             networkingLeads = try c.decodeIfPresent([NetworkingLead].self, forKey: .networkingLeads) ?? []
             watchCompanies = try c.decodeIfPresent([WatchCompany].self, forKey: .watchCompanies) ?? []
             dismissedOpportunityIDs = try c.decodeIfPresent([String].self, forKey: .dismissedOpportunityIDs) ?? []
+            report = try c.decodeIfPresent(ResearchReport.self, forKey: .report)
         }
     }
 
@@ -42,8 +45,8 @@ enum TrackerPersistence {
         return (try? JSONDecoder().decode(Workspace.self, from: data)) ?? Workspace()
     }
 
-    static func save(profile: StudentProfile, applications: [ApplicationRecord], relationships: [RelationshipRecord], networkingLeads: [NetworkingLead], watchCompanies: [WatchCompany], dismissedOpportunityIDs: Set<String>) {
-        guard let data = try? JSONEncoder().encode(Workspace(profile: profile, applications: applications, relationships: relationships, networkingLeads: networkingLeads, watchCompanies: watchCompanies, dismissedOpportunityIDs: Array(dismissedOpportunityIDs))) else { return }
+    static func save(profile: StudentProfile, applications: [ApplicationRecord], relationships: [RelationshipRecord], networkingLeads: [NetworkingLead], watchCompanies: [WatchCompany], dismissedOpportunityIDs: Set<String>, report: ResearchReport) {
+        guard let data = try? JSONEncoder().encode(Workspace(profile: profile, applications: applications, relationships: relationships, networkingLeads: networkingLeads, watchCompanies: watchCompanies, dismissedOpportunityIDs: Array(dismissedOpportunityIDs), report: report)) else { return }
         try? data.write(to: fileURL, options: .atomic)
     }
 

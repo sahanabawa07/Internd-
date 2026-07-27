@@ -2,6 +2,13 @@ import SwiftUI
 
 struct ResearchView: View {
     let store: AppStore
+    @State private var section: ResearchSection = .opportunities
+
+    private enum ResearchSection: String, CaseIterable, Identifiable {
+        case opportunities = "Opportunities"
+        case watchList = "Watch List"
+        var id: String { rawValue }
+    }
 
     private var visibleOpportunities: [Opportunity] {
         store.report.opportunities.filter { !store.dismissedOpportunityIDs.contains($0.id) }
@@ -21,34 +28,25 @@ struct ResearchView: View {
                         .disabled(!store.canResearch)
                 }
 
+                Picker("Research section", selection: $section) {
+                    ForEach(ResearchSection.allCases) { item in
+                        Text(item.rawValue).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 if store.profileRefreshQueued {
                     Label("Your profile changed. Internd is preparing a fresh recommendation set.", systemImage: "arrow.clockwise")
                         .font(.system(size: 15)).foregroundStyle(.secondary)
                 }
 
-                if let run = store.run {
-                    ResearchProgressCard(run: run)
-                } else if visibleOpportunities.isEmpty {
-                    ContentUnavailableView("No current results", systemImage: "sparkle.magnifyingglass", description: Text(store.researchReadinessMessage ?? "Internd will refresh this list whenever you open it."))
+                if section == .opportunities {
+                    opportunitiesSection
                 } else {
-                    Text("Last checked \(Date.now.formatted(date: .abbreviated, time: .shortened)) · \(visibleOpportunities.count) programs shown")
-                        .font(.system(size: 15)).foregroundStyle(.secondary)
-                    ForEach(visibleOpportunities) { opportunity in
-                        OpportunityCard(
-                            opportunity: opportunity,
-                            isTracked: store.applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }),
-                            add: { store.track(opportunity) },
-                            dismiss: { store.dismiss(opportunity) }
-                        )
-                    }
+                    watchListSection
                 }
 
-                if !store.dismissedOpportunityIDs.isEmpty {
-                    Button("Restore dismissed results") { store.restoreDismissedResearch() }
-                        .font(.system(size: 15))
-                }
-
-                if !store.report.skillSuggestions.isEmpty {
+                if section == .opportunities && !store.report.skillSuggestions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Skills emerging from your research").font(.system(size: 25, weight: .semibold))
                         ForEach(store.report.skillSuggestions) { skill in
@@ -62,6 +60,68 @@ struct ResearchView: View {
                 }
             }
             .padding(22)
+        }
+    }
+
+    @ViewBuilder
+    private var opportunitiesSection: some View {
+        if let run = store.run {
+            ResearchProgressCard(run: run)
+        } else if visibleOpportunities.isEmpty {
+            ContentUnavailableView("No opportunities shown yet", systemImage: "sparkle.magnifyingglass", description: Text(store.researchReadinessMessage ?? "Refresh now to look for internships, fellowships, programs, and early-career opportunities."))
+        } else {
+            Text("\(visibleOpportunities.count) opportunities · each has an official link and can be added to your tracker")
+                .font(.system(size: 15)).foregroundStyle(.secondary)
+            ForEach(visibleOpportunities) { opportunity in
+                OpportunityCard(
+                    opportunity: opportunity,
+                    isTracked: store.applications.contains(where: { $0.company == opportunity.company && $0.program == opportunity.program }),
+                    add: { store.track(opportunity) },
+                    dismiss: { store.dismiss(opportunity) }
+                )
+            }
+        }
+
+        if !store.dismissedOpportunityIDs.isEmpty {
+            Button("Restore dismissed opportunities") { store.restoreDismissedResearch() }
+                .font(.system(size: 15))
+        }
+    }
+
+    @ViewBuilder
+    private var watchListSection: some View {
+        if store.watchCompanies.isEmpty {
+            ContentUnavailableView("No companies on your Watch List", systemImage: "eye", description: Text("Internd will place companies here when there is no confirmed live posting to apply to yet."))
+        } else {
+            Text("Watch companies are monitored when Internd refreshes. Open a company to see every named program lead it found.")
+                .font(.system(size: 17)).foregroundStyle(.secondary)
+            ForEach(store.watchCompanies) { watch in
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(watch.company).font(.system(size: 20, weight: .semibold))
+                    Text(watch.reason).font(.system(size: 17)).foregroundStyle(.secondary)
+                    if let leads = watch.programLeads, !leads.isEmpty {
+                        DisclosureGroup("View \(leads.count) program lead\(leads.count == 1 ? "" : "s")") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(leads) { lead in
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(lead.program).font(.system(size: 18, weight: .semibold))
+                                            Text(lead.statusLabel).font(.system(size: 15)).foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Button(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }) ? "Added" : "Add to tracker") { store.track(lead) }
+                                            .buttonStyle(.borderedProminent).tint(InterndPalette.ink)
+                                            .disabled(store.applications.contains(where: { $0.company == lead.company && $0.program == lead.program }))
+                                    }
+                                    Link("Official program page", destination: lead.officialProgramURL).font(.system(size: 16, weight: .medium))
+                                }
+                            }.padding(.top, 6)
+                        }.font(.system(size: 17, weight: .medium))
+                    }
+                    if let url = watch.officialCareersURL { Link("Official careers page", destination: url).font(.system(size: 16, weight: .medium)) }
+                }
+                .padding(13).background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 17))
+            }
         }
     }
 }

@@ -42,9 +42,18 @@ final class AppStore {
         watchCompanies = workspace.watchCompanies
         dismissedOpportunityIDs = Set(workspace.dismissedOpportunityIDs)
         report = workspace.report ?? ResearchReport.empty
+        importCCENewsletterIfNeeded()
     }
 
     var canResearch: Bool { profile.isReady && !apiKey.isEmpty && run == nil }
+
+    private func importCCENewsletterIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: NewsletterImport.cceJuly2026Key) else { return }
+        let existing = Set(report.opportunities.map(\.id))
+        report.opportunities.append(contentsOf: NewsletterImport.cceJuly2026Opportunities().filter { !existing.contains($0.id) })
+        UserDefaults.standard.set(true, forKey: NewsletterImport.cceJuly2026Key)
+        persistApplications()
+    }
 
     var researchReadinessMessage: String? {
         if !profile.isReady { return "Add Career interests, Target companies, or a resume to begin." }
